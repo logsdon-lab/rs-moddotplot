@@ -8,8 +8,6 @@ path = "src/lib.rs"
 
 [dependencies]
 ahash = "0.8.11"
-eyre = "0.6.12"
-itertools = "0.14.0"
 ndarray = "0.16.1"
 noodles = { version = "0.96.0", features = ["fasta"] }
 rayon = "1.10.0"

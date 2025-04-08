@@ -46,7 +46,7 @@ pub(crate) fn create_self_matrix(
     identity: f32,
     ambiguous: bool,
     modimizer: usize,
-) -> eyre::Result<Array2<f32>> {
+) -> Array2<f32> {
     // Restrict sequence sparsity to powers of 2.
     let sequence_sparsity = window_size as f32 / modimizer as f32;
     let sequence_sparsity = if window_size / modimizer <= modimizer {
@@ -79,8 +79,7 @@ pub(crate) fn create_self_matrix(
         k,
         sketch_size,
     );
-    let matrix = self_containment_matrix(no_neighbors_mods, neighbors_mods, k, identity, ambiguous);
-    Ok(matrix)
+    self_containment_matrix(no_neighbors_mods, neighbors_mods, k, identity, ambiguous)
 }
 
 fn partition_overlaps(

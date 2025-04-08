@@ -36,14 +36,13 @@ pub fn compute_self_identity(
     let k = cfg.k;
     let id_threshold = cfg.id_threshold;
     let modimizer = cfg.modimizer;
-    let kmers = io::read_kmers(fasta.as_ref(), k).unwrap();
+    let kmers = io::read_kmers(fasta.as_ref(), k);
 
     kmers
         .into_par_iter()
         .flat_map(|(seq, kmers)| {
             let mtx =
-                create_self_matrix(kmers, window_size, delta, k, id_threshold, false, modimizer)
-                    .unwrap();
+                create_self_matrix(kmers, window_size, delta, k, id_threshold, false, modimizer);
             convert_matrix_to_bed(mtx, window_size, id_threshold, &seq, &seq, true)
         })
         .collect()

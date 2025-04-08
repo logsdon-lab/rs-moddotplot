@@ -67,10 +67,10 @@ fn generate_kmers_from_fasta(seq: &str, k: usize) -> Vec<usize> {
 pub(crate) fn read_kmers(
     filename: impl AsRef<Path>,
     k: usize,
-) -> eyre::Result<Vec<(String, Vec<usize>)>> {
-    let buf = BufReader::new(File::open(filename)?);
+) -> Vec<(String, Vec<usize>)> {
+    let buf = BufReader::new(File::open(filename).unwrap());
     let mut reader = fasta::Reader::new(buf);
-    Ok(reader
+    reader
         .records()
         .par_bridge()
         .map(|rec| {
@@ -80,5 +80,5 @@ pub(crate) fn read_kmers(
                 generate_kmers_from_fasta(str::from_utf8(rec.sequence().as_ref()).unwrap(), k),
             )
         })
-        .collect())
+        .collect()
 }
