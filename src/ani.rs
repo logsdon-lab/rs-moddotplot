@@ -13,7 +13,7 @@ fn remove_ambiguous_base(mod_list: &mut HashSet<usize>, k: usize) {
     // https://users.rust-lang.org/t/fill-string-with-repeated-character/1121/3
     let kmers_to_remove: HashSet<usize> = BASES_TO_REMOVE
         .iter()
-        .map(|b| hash_builder.hash_one(&std::iter::repeat(b).take(k).collect::<String>()) as usize)
+        .map(|b| hash_builder.hash_one(std::iter::repeat(b).take(k).collect::<String>()) as usize)
         .collect();
     // Remove homopolymers of ambiguous nucleotides
     mod_list.retain(|m| !kmers_to_remove.contains(m));
@@ -192,22 +192,20 @@ pub(crate) fn convert_matrix_to_bed(
     for x in 0..rows {
         for y in 0..cols {
             let value = matrix[(x, y)];
-            if !self_identity || (self_identity && x <= y) {
-                if value >= id_threshold / 100.0 {
-                    let start_x = x * window_size + 1;
-                    let end_x = (x + 1) * window_size;
-                    let start_y = y * window_size + 1;
-                    let end_y = (y + 1) * window_size;
-                    bed.push(Row {
-                        query_name: query_name.to_owned(),
-                        query_start: start_x,
-                        query_end: end_x,
-                        reference_name: reference_name.to_owned(),
-                        reference_start: start_y,
-                        reference_end: end_y,
-                        perc_id_by_events: value,
-                    });
-                }
+            if !self_identity || x <= y && value >= id_threshold / 100.0 {
+                let start_x = x * window_size + 1;
+                let end_x = (x + 1) * window_size;
+                let start_y = y * window_size + 1;
+                let end_y = (y + 1) * window_size;
+                bed.push(Row {
+                    query_name: query_name.to_owned(),
+                    query_start: start_x,
+                    query_end: end_x,
+                    reference_name: reference_name.to_owned(),
+                    reference_start: start_y,
+                    reference_end: end_y,
+                    perc_id_by_events: value,
+                });
             }
         }
     }
@@ -257,7 +255,7 @@ fn containment_neighbors(
     let len_a = set1.len();
     let len_b = set2.len();
 
-    let intersection_a_b_prime = set1.intersection(set4).into_iter().count();
+    let intersection_a_b_prime = set1.intersection(set4).count();
     // If len_a is zero, handle it by setting containment_a_b_prime to a default value
     let containment_a_b_prime = if len_a != 0 {
         intersection_a_b_prime as f32 / len_a as f32
@@ -268,7 +266,7 @@ fn containment_neighbors(
     if binomial_distance(containment_a_b_prime, k) < identity / 100.0 {
         0.0
     } else {
-        let intersection_a_prime_b = set2.intersection(set3).into_iter().count();
+        let intersection_a_prime_b = set2.intersection(set3).count();
         // If len_b is zero, handle it by setting containment_a_prime_b to a default value
         let containment_a_prime_b = if len_b != 0 {
             intersection_a_prime_b as f32 / len_b as f32
