@@ -1,12 +1,10 @@
-use core::str;
 use ahash::{HashSet, RandomState};
+use core::str;
 use ndarray::Array2;
 
 use crate::io::Row;
 
-
 const BASES_TO_REMOVE: [char; 11] = ['R', 'Y', 'M', 'K', 'S', 'W', 'H', 'B', 'V', 'D', 'N'];
-
 
 fn remove_ambiguous_base(mod_list: &mut HashSet<usize>, k: usize) {
     let hash_builder = RandomState::new();
@@ -177,7 +175,6 @@ fn convert_to_modimizers(
     mod_total
 }
 
-
 pub(crate) fn convert_matrix_to_bed(
     matrix: Array2<f32>,
     window_size: usize,
@@ -343,5 +340,4 @@ mod test {
             [&seq[0..4], &seq[2..8], &seq[4..10], &seq[8..]].to_vec()
         );
     }
-
 }
