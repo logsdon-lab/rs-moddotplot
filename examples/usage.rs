@@ -3,7 +3,10 @@ use std::io::{stdout, BufWriter, Write};
 use rs_moddotplot::{compute_self_identity, Row};
 
 fn main() {
-    let bed = compute_self_identity("data/chm13_chr1.fa", None, 4);
+    let mut args = std::env::args();
+    let infile = args.nth(1).expect("Missing input fasta.");
+
+    let bed = compute_self_identity(infile, None, 4);
     let mut fh = BufWriter::new(stdout());
     writeln!(&mut fh, "{}", Row::header()).unwrap();
     for row in bed {

@@ -6,7 +6,7 @@ Rust API implementation of the [`ModDotPlot`](https://github.com/marbl/ModDotPlo
 
 ## Usage
 ```bash
-cargo add --git https://github.com/koisland/rs-moddotplot.git --package rs-moddotplot
+cargo add --git https://github.com/koisland/rs-moddotplot.git
 ```
 
 ```rust

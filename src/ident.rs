@@ -61,7 +61,7 @@ pub fn compute_seq_self_identity(seq: &str, name: &str, config: Option<SelfIdent
     let id_threshold = cfg.id_threshold;
     let modimizer = cfg.modimizer;
 
-    let kmers = generate_kmers_from_fasta(str::from_utf8(seq.as_bytes()).unwrap(), k);
+    let kmers = generate_kmers_from_fasta(seq, k);
     let mtx = create_self_matrix(kmers, window_size, delta, k, id_threshold, false, modimizer);
     convert_matrix_to_bed(mtx, window_size, id_threshold, name, name, true)
 }
