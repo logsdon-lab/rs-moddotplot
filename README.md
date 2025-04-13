@@ -26,11 +26,16 @@ fn main() {
 ```
 
 ## Example
+Self-identity
 ```bash
-cargo run --example usage --release
+cargo run --example ident --release -- data/chm13_chr1.fa
+```
+
+Local self-identity
+```bash
+cargo run --example local_ident --release -- data/chm13_chr1.fa
 ```
 
 ## TODO:
-* [ ] - Write 1D code.
 * [ ] - More tests and docstrings.
 * [ ] - Improve error handling and type casts.

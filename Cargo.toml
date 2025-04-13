@@ -13,5 +13,9 @@ noodles = { version = "0.96.0", features = ["fasta"] }
 rayon = "1.10.0"
 
 [[example]]
-name = "usage"
-path = "examples/usage.rs"
+name = "ident"
+path = "examples/ident.rs"
+
+[[example]]
+name = "local_ident"
+path = "examples/local_ident.rs"

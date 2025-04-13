@@ -6,5 +6,5 @@ mod ident;
 mod io;
 
 pub use cfg::SelfIdentConfig;
-pub use ident::{compute_self_identity, compute_seq_self_identity};
-pub use io::Row;
+pub use ident::{compute_self_identity, compute_seq_self_identity, compute_local_seq_self_identity};
+pub use io::{Row, LocalRow};

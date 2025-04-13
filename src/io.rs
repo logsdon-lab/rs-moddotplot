@@ -36,6 +36,33 @@ impl Row {
     }
 }
 
+/// Local sequence identity matrix row.
+#[derive(Debug, PartialEq, Clone)]
+pub struct LocalRow {
+    pub chrom: String,
+    pub start: usize,
+    pub end: usize,
+    /// Average percent identity by events.
+    pub avg_perc_id_by_events: f32,
+}
+
+impl LocalRow {
+    pub fn header() -> &'static str {
+        "chrom\tstart\tend\tavg_perc_id_by_events"
+    }
+
+    pub fn tsv(&self) -> String {
+        format!(
+            "{}\t{}\t{}\t{}",
+            self.chrom,
+            self.start,
+            self.end,
+            self.avg_perc_id_by_events
+        )
+    }
+}
+
+
 /// Generate kmers from a sequence string with k length.
 /// Uses ahash instead of murmurhash3.
 pub(crate) fn generate_kmers_from_fasta(seq: &str, k: usize) -> Vec<usize> {
