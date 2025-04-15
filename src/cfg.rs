@@ -28,7 +28,7 @@ impl Default for SelfIdentConfig {
     }
 }
 /// Configuration of local self-identity calculation.
-/// 
+///
 /// Example:
 /// * With `n_bins` of 2 and `window` size of 5.
 ///     * `*` is the calculated aln band

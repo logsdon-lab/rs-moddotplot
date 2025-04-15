@@ -54,14 +54,10 @@ impl LocalRow {
     pub fn tsv(&self) -> String {
         format!(
             "{}\t{}\t{}\t{}",
-            self.chrom,
-            self.start,
-            self.end,
-            self.avg_perc_id_by_events
+            self.chrom, self.start, self.end, self.avg_perc_id_by_events
         )
     }
 }
-
 
 /// Generate kmers from a sequence string with k length.
 /// Uses ahash instead of murmurhash3.

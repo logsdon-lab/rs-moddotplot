@@ -18,7 +18,7 @@ use crate::{io, Row, SelfIdentConfig};
 ///     * Configuration for ANI. Similar to ModDotPlot.
 /// * threads
 ///     * Number of threads.
-/// 
+///
 /// # Returns
 /// * Self-identity BED file matrix as a list of rows.
 pub fn compute_self_identity(
@@ -58,7 +58,11 @@ pub fn compute_self_identity(
 ///     * Input sequence name.
 /// * config
 ///     * Configuration for ANI. Similar to ModDotPlot.
-pub fn compute_seq_self_identity(seq: &str, name: &str, config: Option<SelfIdentConfig>) -> Vec<Row> {
+pub fn compute_seq_self_identity(
+    seq: &str,
+    name: &str,
+    config: Option<SelfIdentConfig>,
+) -> Vec<Row> {
     let cfg = config.unwrap_or_default();
     let window_size = cfg.window_size;
     let delta = cfg.delta;
@@ -71,26 +75,25 @@ pub fn compute_seq_self_identity(seq: &str, name: &str, config: Option<SelfIdent
     convert_matrix_to_bed(mtx, window_size, id_threshold, name, name, true)
 }
 
-
 /// Compute the local sequence identity from a set of sequence self-identity matrix [`Row`]s.
-/// 
+///
 /// # Args
 /// * rows
 ///     * Sequence self-identity matrix rows.
 /// * config
 ///     * [`LocalSelfIdentConfig`] configuration.
-/// 
+///
 /// # Returns
 /// * Local self-identity BED file matrix as a list of rows.
 pub fn compute_local_seq_self_identity(
     rows: &[Row],
-    config: Option<LocalSelfIdentConfig>
+    config: Option<LocalSelfIdentConfig>,
 ) -> Vec<LocalRow> {
     let cfg = config.unwrap_or_default();
     let window = cfg.window_size;
     let n_bins = cfg.n_bins;
     let ignore_bins = cfg.ignore_bins;
-    let Some(chrom) = rows.get(0).map(|row| &row.reference_name) else {
+    let Some(chrom) = rows.first().map(|row| &row.reference_name) else {
         return vec![];
     };
 
@@ -100,8 +103,11 @@ pub fn compute_local_seq_self_identity(
         let y = line.reference_start / window;
         let ident = line.perc_id_by_events;
         // Convert position to indices.
-        aln_mtx.entry(x)
-            .and_modify(|rec| { rec.insert(y, ident); })
+        aln_mtx
+            .entry(x)
+            .and_modify(|rec| {
+                rec.insert(y, ident);
+            })
             .or_insert_with(|| HashMap::from_iter([(y, ident)]));
     }
     let mut binned_ident = vec![];
@@ -126,7 +132,7 @@ pub fn compute_local_seq_self_identity(
                 idents.push(ident);
             }
         }
-        let n_pos =  idents.len() as f32;
+        let n_pos = idents.len() as f32;
         binned_ident.push(LocalRow {
             chrom: chrom.to_owned(),
             start,
