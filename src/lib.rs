@@ -4,6 +4,7 @@ mod ani;
 mod cfg;
 mod ident;
 mod io;
+mod common;
 
 pub use cfg::{LocalSelfIdentConfig, SelfIdentConfig};
 pub use ident::{

@@ -1,15 +1,15 @@
-use ahash::{HashSet, RandomState};
 use core::str;
 use ndarray::Array2;
+use ahash::RandomState;
 
-use crate::io::Row;
+use crate::{common::AIndexSet, io::Row};
 
 const BASES_TO_REMOVE: [char; 11] = ['R', 'Y', 'M', 'K', 'S', 'W', 'H', 'B', 'V', 'D', 'N'];
 
-fn remove_ambiguous_base(mod_list: &mut HashSet<usize>, k: usize) {
+fn remove_ambiguous_base(mod_list: &mut AIndexSet<usize>, k: usize) {
     let hash_builder = RandomState::new();
     // https://users.rust-lang.org/t/fill-string-with-repeated-character/1121/3
-    let kmers_to_remove: HashSet<usize> = BASES_TO_REMOVE
+    let kmers_to_remove: AIndexSet<usize> = BASES_TO_REMOVE
         .iter()
         .map(|b| hash_builder.hash_one(std::iter::repeat(b).take(k).collect::<String>()) as usize)
         .collect();
@@ -138,8 +138,8 @@ fn populate_modimizers(
     ambiguous: bool,
     expectation: usize,
     k: usize,
-) -> HashSet<usize> {
-    let mut mod_set = HashSet::default();
+) -> AIndexSet<usize> {
+    let mut mod_set = AIndexSet::default();
     for kmer in partition {
         if kmer % sparsity == 0 {
             mod_set.insert(*kmer);
@@ -161,7 +161,7 @@ fn convert_to_modimizers(
     ambiguous: bool,
     k: usize,
     expectation: usize,
-) -> Vec<HashSet<usize>> {
+) -> Vec<AIndexSet<usize>> {
     let mut mod_total = vec![];
     for prt in kmer_list {
         mod_total.push(populate_modimizers(
@@ -241,10 +241,10 @@ fn binomial_distance(containment_value: f32, kmer_value: usize) -> f32 {
 /// Returns:
 /// * The containment neighbors value.
 fn containment_neighbors(
-    set1: &HashSet<usize>,
-    set2: &HashSet<usize>,
-    set3: &HashSet<usize>,
-    set4: &HashSet<usize>,
+    set1: &AIndexSet<usize>,
+    set2: &AIndexSet<usize>,
+    set3: &AIndexSet<usize>,
+    set4: &AIndexSet<usize>,
     identity: f32,
     k: usize,
 ) -> f32 {
@@ -291,8 +291,8 @@ fn containment_neighbors(
 /// # Returns
 /// * An ndarray representing the self-containment matrix.
 fn self_containment_matrix(
-    mod_set: Vec<HashSet<usize>>,
-    mod_set_neighbors: Vec<HashSet<usize>>,
+    mod_set: Vec<AIndexSet<usize>>,
+    mod_set_neighbors: Vec<AIndexSet<usize>>,
     k: usize,
     identity: f32,
     ambiguous: bool,

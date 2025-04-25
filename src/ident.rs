@@ -1,13 +1,17 @@
 use core::str;
-use std::collections::HashMap;
 use std::path::Path;
+use std::usize;
 
 use crate::ani::{convert_matrix_to_bed, create_self_matrix};
 use crate::cfg::LocalSelfIdentConfig;
+use crate::common::AIndexMap;
+
+use ahash::AHashSet;
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 
 use crate::io::{generate_kmers_from_fasta, LocalRow};
 use crate::{io, Row, SelfIdentConfig};
+
 
 /// Compute self-identity between sequences in a given fasta file.
 ///
@@ -97,7 +101,7 @@ pub fn compute_local_seq_self_identity(
         return vec![];
     };
 
-    let mut aln_mtx: HashMap<usize, HashMap<usize, f32>> = HashMap::new();
+    let mut aln_mtx: AIndexMap<usize, AIndexMap<usize, f32>> = AIndexMap::default();
     for line in rows {
         let x = line.query_start / window;
         let y = line.reference_start / window;
@@ -108,7 +112,7 @@ pub fn compute_local_seq_self_identity(
             .and_modify(|rec| {
                 rec.insert(y, ident);
             })
-            .or_insert_with(|| HashMap::from_iter([(y, ident)]));
+            .or_insert_with(|| AIndexMap::from_iter([(y, ident)]));
     }
     let mut binned_ident = vec![];
     for st_idx in aln_mtx.keys() {
@@ -144,12 +148,133 @@ pub fn compute_local_seq_self_identity(
     binned_ident
 }
 
-// #[cfg(test)]
-// mod test {
-//     use crate::compute_self_identity;
 
-//     #[test]
-//     fn test_self_ident() {
-//         let bed = compute_self_identity("test/chm13_chr1.fa", None, 4);
-//     }
-// }
+/// cargo test --package rs-moddotplot --lib -- ident::test::test_self_ident --exact --show-output
+pub fn compute_nonzero_seq_self_identity(
+    rows: &[Row],
+) -> Vec<LocalRow> {
+    let window = 5000;
+    let ignore_band = 20;
+    let Some(chrom) = rows.first().map(|row| &row.reference_name) else {
+        return vec![];
+    };
+
+    let mut binned_ident = vec![];
+    let mut aln_mtx: AIndexMap<usize, AIndexMap<usize, f32>> = AIndexMap::default();
+    for line in rows {
+        let x = line.query_start / window;
+        let y = line.reference_start / window;
+        let ident = line.perc_id_by_events;
+        // Convert position to indices.
+        aln_mtx
+            .entry(x)
+            .and_modify(|rec| {
+                rec.insert(y, ident);
+            })
+            .or_insert_with(|| AIndexMap::from_iter([(y, ident)]));
+    }
+
+    // DFS search.
+    let mut traveled = AHashSet::new();
+    for x in aln_mtx.keys() {
+        let y = *x + ignore_band;
+        // 7       * * *   +
+        // 6       * *   + 
+        // 5       *   +    
+        // 4 * * *   +
+        // 3 * *   +
+        // 2 *   +
+        // 1   +
+        // 0 +
+        //   0 1 2 3 4 5 6 7
+        if traveled.contains(&(*x,y)) {
+            continue;
+        }
+        let mut positions: Vec<(usize, usize) >= vec![(*x, y)];
+        let mut idents: Vec<f32> = vec![];
+        let mut max_x = *x;
+        while let Some(position) = positions.pop() {
+            let (x, y) = position;
+
+            if traveled.contains(&(x,y)) {
+                continue;
+            }
+            // Store position traveled.
+            traveled.insert((x, y));
+
+            // Stop if zero.
+            println!("{:?}", (x,y));
+            let Some(col) = aln_mtx.get(&x) else {
+                // Update x since we've gone into region
+                max_x = x - 1;
+                continue;
+            };
+            let Some(ident) = col.get(&y) else {
+                continue;
+            };
+            // Add next positions to queue.
+            positions.push((x, y + 1));
+            positions.push((x + 1, y));
+            idents.push(*ident);
+        }
+        if idents.is_empty() {
+            continue;
+        }
+
+        let start = x * window + 1;
+        let end = max_x * window + 1;
+        let n_pos = idents.len() as f32;
+        // Calculate average identity within spanned region and min coordinates.
+        binned_ident.push(LocalRow {
+            chrom: chrom.to_owned(),
+            start,
+            end,
+            avg_perc_id_by_events: idents.into_iter().sum::<f32>() / n_pos,
+        });
+    }
+    binned_ident
+}
+
+
+#[cfg(test)]
+mod test {
+    use std::{fs::File, io::{BufRead, BufReader, BufWriter, Write}, path::Path};
+
+    use crate::{compute_self_identity, Row};
+
+    use super::compute_nonzero_seq_self_identity;
+    
+    #[test]
+    fn test_self_ident() {
+        let path_outfile = Path::new("rows.tsv");
+        let rows = if let Ok(mut new_file) = File::create_new(path_outfile).map(BufWriter::new) {
+            let rows = compute_self_identity("data/HG00438_chr3_HG00438#1#CM089169.1_89902259-96402509.fa", None, 1);
+            for r in rows.iter() {
+                writeln!(new_file, "{}", r.tsv()).unwrap();
+            }
+            rows
+        } else {
+            let reader = BufReader::new(File::open(path_outfile).unwrap());
+            let mut rows = vec![];
+            for line in reader.lines() {
+                let line = line.unwrap();
+                let [qname, qst, qend, rname, rst, rend, ident] = line.trim().split('\t').collect::<Vec<&str>>()[..] else {
+                    panic!()
+                };
+                rows.push(Row {
+                    query_name: qname.to_owned(),
+                    query_start: qst.parse().unwrap(),
+                    query_end: qend.parse().unwrap(),
+                    reference_name: rname.to_owned(),
+                    reference_start: rst.parse().unwrap(),
+                    reference_end: rend.parse().unwrap(),
+                    perc_id_by_events: ident.parse().unwrap(),
+                });
+            }
+            rows
+        };
+        for r in compute_nonzero_seq_self_identity(&rows) {
+            println!("{}", r.tsv())
+        };       
+    }
+}
