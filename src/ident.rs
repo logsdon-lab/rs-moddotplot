@@ -1,4 +1,5 @@
 use core::str;
+use std::collections::VecDeque;
 use std::path::Path;
 
 use crate::ani::{convert_matrix_to_bed, create_self_matrix};
@@ -178,12 +179,12 @@ pub fn compute_group_seq_self_identity(rows: &[Row]) -> Vec<LocalRow> {
             .or_insert_with(|| AIndexMap::from_iter([(y, ident)]));
     }
 
-    // DFS search.
+    // BFS search.
     let mut traveled = AHashSet::new();
     for x in aln_mtx.keys() {
         let y = *x;
-        // Travel along the self-identity band and perform a depth first search for any non-zero identity position.
-        // Exit when we reach a traveled point or the adjacent diagonals are both zero.
+        // Travel along the self-identity band and perform a breadth first search for any non-zero identity position.
+        // Track traveled points and adjacent diagonals as exit condition.
         // * Adjacent diagonals indicate a transition into a different sequence identity group.
         // 7       * * * * +
         // 6       * * * +
@@ -197,10 +198,10 @@ pub fn compute_group_seq_self_identity(rows: &[Row]) -> Vec<LocalRow> {
         if traveled.contains(&(*x, y)) {
             continue;
         }
-        let mut positions: Vec<(usize, usize)> = vec![(*x, y)];
+        let mut positions: VecDeque<(usize, usize)> = VecDeque::from_iter([(*x, y)]);
         let mut idents: Vec<f32> = vec![];
         let mut max_x = *x;
-        while let Some(position) = positions.pop() {
+        while let Some(position) = positions.pop_front() {
             let (x, y) = position;
 
             if traveled.contains(&(x, y)) {
@@ -236,8 +237,8 @@ pub fn compute_group_seq_self_identity(rows: &[Row]) -> Vec<LocalRow> {
             // Add next positions to queue.
             // *
             // x *
-            positions.push((x, y + 1));
-            positions.push((x + 1, y));
+            positions.push_back((x, y + 1));
+            positions.push_back((x + 1, y));
             idents.push(*ident);
         }
         if idents.is_empty() {

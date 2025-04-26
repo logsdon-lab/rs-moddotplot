@@ -19,3 +19,7 @@ path = "examples/ident.rs"
 [[example]]
 name = "local_ident"
 path = "examples/local_ident.rs"
+
+[[example]]
+name = "group_ident"
+path = "examples/group_ident.rs"
