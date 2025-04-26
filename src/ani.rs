@@ -1,6 +1,5 @@
-use core::str;
-use ndarray::Array2;
 use ahash::RandomState;
+use core::str;
 
 use crate::{common::AIndexSet, io::Row};
 
@@ -44,7 +43,7 @@ pub(crate) fn create_self_matrix(
     identity: f32,
     ambiguous: bool,
     modimizer: usize,
-) -> Array2<f32> {
+) -> Vec<Vec<f32>> {
     // Restrict sequence sparsity to powers of 2.
     let sequence_sparsity = window_size as f32 / modimizer as f32;
     let sequence_sparsity = if window_size / modimizer <= modimizer {
@@ -176,7 +175,7 @@ fn convert_to_modimizers(
 }
 
 pub(crate) fn convert_matrix_to_bed(
-    matrix: Array2<f32>,
+    matrix: Vec<Vec<f32>>,
     window_size: usize,
     id_threshold: f32,
     query_name: &str,
@@ -184,10 +183,10 @@ pub(crate) fn convert_matrix_to_bed(
     self_identity: bool,
 ) -> Vec<Row> {
     let mut bed: Vec<Row> = vec![];
-    let (rows, cols) = matrix.dim();
+    let (rows, cols) = (matrix.len(), matrix.len());
     for x in 0..rows {
         for y in 0..cols {
-            let value = matrix[(x, y)];
+            let value = matrix[x][y];
             if !self_identity || x <= y && value >= id_threshold / 100.0 {
                 let start_x = x * window_size + 1;
                 let end_x = (x + 1) * window_size;
@@ -296,15 +295,15 @@ fn self_containment_matrix(
     k: usize,
     identity: f32,
     ambiguous: bool,
-) -> Array2<f32> {
+) -> Vec<Vec<f32>> {
     let n = mod_set.len();
-    let mut containment_matrix: Array2<f32> = Array2::zeros((n, n));
+    let mut containment_matrix: Vec<Vec<f32>> = vec![vec![0.0; n]; n];
 
     for w in 0..n {
-        containment_matrix[(w, w)] = 100.0;
+        containment_matrix[w][w] = 100.0;
 
         if mod_set[w].is_empty() && !ambiguous {
-            containment_matrix[(w, w)] = 0.0;
+            containment_matrix[w][w] = 0.0;
         }
 
         for r in (w + 1)..n {
@@ -319,8 +318,8 @@ fn self_containment_matrix(
                 ),
                 k,
             );
-            containment_matrix[(r, w)] = c_hat * 100.0;
-            containment_matrix[(w, r)] = c_hat * 100.0;
+            containment_matrix[r][w] = c_hat * 100.0;
+            containment_matrix[w][r] = c_hat * 100.0;
         }
     }
 

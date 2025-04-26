@@ -12,7 +12,6 @@ use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use crate::io::{generate_kmers_from_fasta, LocalRow};
 use crate::{io, Row, SelfIdentConfig};
 
-
 /// Compute self-identity between sequences in a given fasta file.
 ///
 /// # Args
@@ -148,14 +147,20 @@ pub fn compute_local_seq_self_identity(
     binned_ident
 }
 
-
-/// cargo test --package rs-moddotplot --lib -- ident::test::test_self_ident --exact --show-output
-pub fn compute_nonzero_seq_self_identity(
-    rows: &[Row],
-) -> Vec<LocalRow> {
-    let window = 5000;
-    let ignore_band = 20;
-    let Some(chrom) = rows.first().map(|row| &row.reference_name) else {
+/// Compute the grouped sequence identity from a set of sequence self-identity matrix [`Row`]s.
+///
+/// # Args
+/// * rows
+///     * Sequence self-identity matrix rows. Each interval must be same length.
+///
+/// # Returns
+/// * Group self-identity BED file matrix as a list of rows.
+/// * Regions larger than window size are returned.
+pub fn compute_group_seq_self_identity(rows: &[Row]) -> Vec<LocalRow> {
+    let Some((chrom, window)) = rows
+        .first()
+        .map(|row| (&row.reference_name, row.query_end - row.query_start))
+    else {
         return vec![];
     };
 
@@ -177,42 +182,61 @@ pub fn compute_nonzero_seq_self_identity(
     // DFS search.
     let mut traveled = AHashSet::new();
     for x in aln_mtx.keys() {
-        let y = *x + ignore_band;
-        // 7       * * *   +
-        // 6       * *   + 
-        // 5       *   +    
-        // 4 * * *   +
-        // 3 * *   +
-        // 2 *   +
-        // 1   +
+        let y = *x;
+        // Travel along the self-identity band and perform a depth first search for any non-zero identity position.
+        // Exit when we reach a traveled point or the adjacent diagonals are both zero.
+        // * Adjacent diagonals indicate a transition into a different sequence identity group.
+        // 7       * * * * +
+        // 6       * * * +
+        // 5       * * +
+        // 4 * * * * +
+        // 3 * * * +
+        // 2 * * +
+        // 1 * +
         // 0 +
         //   0 1 2 3 4 5 6 7
-        if traveled.contains(&(*x,y)) {
+        if traveled.contains(&(*x, y)) {
             continue;
         }
-        let mut positions: Vec<(usize, usize) >= vec![(*x, y)];
+        let mut positions: Vec<(usize, usize)> = vec![(*x, y)];
         let mut idents: Vec<f32> = vec![];
         let mut max_x = *x;
         while let Some(position) = positions.pop() {
             let (x, y) = position;
 
-            if traveled.contains(&(x,y)) {
+            if traveled.contains(&(x, y)) {
                 continue;
             }
             // Store position traveled.
             traveled.insert((x, y));
 
-            // Stop if zero.
-            println!("{:?}", (x,y));
+            // Stop if both diagonal is zero.
+            // *
+            //  x
+            //    *
+            let up_left = aln_mtx
+                .get(&(x + 1))
+                .and_then(|col| y.checked_sub(1).and_then(|y| col.get(&y)));
+            let down_right = x
+                .checked_sub(1)
+                .and_then(|x| aln_mtx.get(&x))
+                .and_then(|col| col.get(&(y + 1)));
+
+            if up_left.is_none() && down_right.is_none() {
+                max_x = x;
+                continue;
+            }
             let Some(col) = aln_mtx.get(&x) else {
-                // Update x since we've gone into region
-                max_x = x - 1;
+                // Update x since we've gone into region.
+                max_x = x;
                 continue;
             };
             let Some(ident) = col.get(&y) else {
                 continue;
             };
             // Add next positions to queue.
+            // *
+            // x *
             positions.push((x, y + 1));
             positions.push((x + 1, y));
             idents.push(*ident);
@@ -223,7 +247,12 @@ pub fn compute_nonzero_seq_self_identity(
 
         let start = x * window + 1;
         let end = max_x * window + 1;
+        let length = end - start;
         let n_pos = idents.len() as f32;
+        // Ignore self diagonal.
+        if length <= window {
+            continue;
+        }
         // Calculate average identity within spanned region and min coordinates.
         binned_ident.push(LocalRow {
             chrom: chrom.to_owned(),
@@ -235,20 +264,27 @@ pub fn compute_nonzero_seq_self_identity(
     binned_ident
 }
 
-
 #[cfg(test)]
 mod test {
-    use std::{fs::File, io::{BufRead, BufReader, BufWriter, Write}, path::Path};
+    use std::{
+        fs::File,
+        io::{BufRead, BufReader, BufWriter, Write},
+        path::Path,
+    };
 
-    use crate::{compute_self_identity, Row};
+    use crate::{compute_self_identity, LocalRow, Row};
 
-    use super::compute_nonzero_seq_self_identity;
-    
+    use super::compute_group_seq_self_identity;
+
     #[test]
     fn test_self_ident() {
         let path_outfile = Path::new("rows.tsv");
         let rows = if let Ok(mut new_file) = File::create_new(path_outfile).map(BufWriter::new) {
-            let rows = compute_self_identity("data/HG00438_chr3_HG00438#1#CM089169.1_89902259-96402509.fa", None, 1);
+            let rows = compute_self_identity(
+                "data/HG00438_chr3_HG00438#1#CM089169.1_89902259-96402509.fa",
+                None,
+                1,
+            );
             for r in rows.iter() {
                 writeln!(new_file, "{}", r.tsv()).unwrap();
             }
@@ -258,8 +294,10 @@ mod test {
             let mut rows = vec![];
             for line in reader.lines() {
                 let line = line.unwrap();
-                let [qname, qst, qend, rname, rst, rend, ident] = line.trim().split('\t').collect::<Vec<&str>>()[..] else {
-                    panic!()
+                let [qname, qst, qend, rname, rst, rend, ident] =
+                    line.trim().split('\t').collect::<Vec<&str>>()[..]
+                else {
+                    panic!("Invalid columns.")
                 };
                 rows.push(Row {
                     query_name: qname.to_owned(),
@@ -273,8 +311,121 @@ mod test {
             }
             rows
         };
-        for r in compute_nonzero_seq_self_identity(&rows) {
-            println!("{}", r.tsv())
-        };       
+        let grouped_rows = compute_group_seq_self_identity(&rows);
+        assert_eq!(
+            vec![
+                LocalRow {
+                    chrom: "HG00438_chr3_HG00438#1#CM089169.1:89902259-96402509".to_owned(),
+                    start: 89983,
+                    end: 104980,
+                    avg_perc_id_by_events: 87.974396
+                },
+                LocalRow {
+                    chrom: "HG00438_chr3_HG00438#1#CM089169.1:89902259-96402509".to_owned(),
+                    start: 209959,
+                    end: 219957,
+                    avg_perc_id_by_events: 90.16794
+                },
+                LocalRow {
+                    chrom: "HG00438_chr3_HG00438#1#CM089169.1:89902259-96402509".to_owned(),
+                    start: 394922,
+                    end: 404920,
+                    avg_perc_id_by_events: 95.44085
+                },
+                LocalRow {
+                    chrom: "HG00438_chr3_HG00438#1#CM089169.1:89902259-96402509".to_owned(),
+                    start: 419917,
+                    end: 429915,
+                    avg_perc_id_by_events: 87.34493
+                },
+                LocalRow {
+                    chrom: "HG00438_chr3_HG00438#1#CM089169.1:89902259-96402509".to_owned(),
+                    start: 434914,
+                    end: 489903,
+                    avg_perc_id_by_events: 81.49909
+                },
+                LocalRow {
+                    chrom: "HG00438_chr3_HG00438#1#CM089169.1:89902259-96402509".to_owned(),
+                    start: 1449711,
+                    end: 1469707,
+                    avg_perc_id_by_events: 80.896675
+                },
+                LocalRow {
+                    chrom: "HG00438_chr3_HG00438#1#CM089169.1:89902259-96402509".to_owned(),
+                    start: 1499701,
+                    end: 1509699,
+                    avg_perc_id_by_events: 80.057755
+                },
+                LocalRow {
+                    chrom: "HG00438_chr3_HG00438#1#CM089169.1:89902259-96402509".to_owned(),
+                    start: 1549691,
+                    end: 1559689,
+                    avg_perc_id_by_events: 94.243454
+                },
+                // live alpha-satellite array.
+                LocalRow {
+                    chrom: "HG00438_chr3_HG00438#1#CM089169.1:89902259-96402509".to_owned(),
+                    start: 1574686,
+                    end: 3429315,
+                    avg_perc_id_by_events: 99.29863
+                },
+                // hsat1a.
+                LocalRow {
+                    chrom: "HG00438_chr3_HG00438#1#CM089169.1:89902259-96402509".to_owned(),
+                    start: 3439313,
+                    end: 5168967,
+                    avg_perc_id_by_events: 96.924835
+                },
+                LocalRow {
+                    chrom: "HG00438_chr3_HG00438#1#CM089169.1:89902259-96402509".to_owned(),
+                    start: 5173966,
+                    end: 5193962,
+                    avg_perc_id_by_events: 94.55426
+                },
+                LocalRow {
+                    chrom: "HG00438_chr3_HG00438#1#CM089169.1:89902259-96402509".to_owned(),
+                    start: 5198961,
+                    end: 5368927,
+                    avg_perc_id_by_events: 89.79428
+                },
+                LocalRow {
+                    chrom: "HG00438_chr3_HG00438#1#CM089169.1:89902259-96402509".to_owned(),
+                    start: 5398921,
+                    end: 5408919,
+                    avg_perc_id_by_events: 88.830315
+                },
+                LocalRow {
+                    chrom: "HG00438_chr3_HG00438#1#CM089169.1:89902259-96402509".to_owned(),
+                    start: 5603880,
+                    end: 5643872,
+                    avg_perc_id_by_events: 98.12903
+                },
+                LocalRow {
+                    chrom: "HG00438_chr3_HG00438#1#CM089169.1:89902259-96402509".to_owned(),
+                    start: 5648871,
+                    end: 5838833,
+                    avg_perc_id_by_events: 92.44347
+                },
+                LocalRow {
+                    chrom: "HG00438_chr3_HG00438#1#CM089169.1:89902259-96402509".to_owned(),
+                    start: 6118777,
+                    end: 6133774,
+                    avg_perc_id_by_events: 81.78596
+                },
+                LocalRow {
+                    chrom: "HG00438_chr3_HG00438#1#CM089169.1:89902259-96402509".to_owned(),
+                    start: 6208759,
+                    end: 6218757,
+                    avg_perc_id_by_events: 79.344925
+                },
+                LocalRow {
+                    chrom: "HG00438_chr3_HG00438#1#CM089169.1:89902259-96402509".to_owned(),
+                    start: 6288743,
+                    end: 6318737,
+                    avg_perc_id_by_events: 80.197556
+                }
+            ],
+            grouped_rows
+        )
     }
 }
