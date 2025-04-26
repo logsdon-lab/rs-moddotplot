@@ -1,5 +1,6 @@
 use ahash::RandomState;
 use core::str;
+use rayon::iter::{IntoParallelIterator, ParallelIterator};
 
 use crate::{common::AIndexSet, io::Row};
 
@@ -161,17 +162,10 @@ fn convert_to_modimizers(
     k: usize,
     expectation: usize,
 ) -> Vec<AIndexSet<usize>> {
-    let mut mod_total = vec![];
-    for prt in kmer_list {
-        mod_total.push(populate_modimizers(
-            prt,
-            sparsity,
-            ambiguous,
-            expectation,
-            k,
-        ));
-    }
-    mod_total
+    kmer_list
+        .into_par_iter()
+        .map(|prt| populate_modimizers(prt, sparsity, ambiguous, expectation, k))
+        .collect()
 }
 
 pub(crate) fn convert_matrix_to_bed(
@@ -184,10 +178,9 @@ pub(crate) fn convert_matrix_to_bed(
 ) -> Vec<Row> {
     let mut bed: Vec<Row> = vec![];
     let (rows, cols) = (matrix.len(), matrix.len());
-    for x in 0..rows {
-        for y in 0..cols {
-            let value = matrix[x][y];
-            if !self_identity || x <= y && value >= id_threshold / 100.0 {
+    for (x, col) in matrix.iter().enumerate().take(rows) {
+        for (y, value) in col.iter().enumerate().take(cols) {
+            if !self_identity || x <= y && *value >= id_threshold / 100.0 {
                 let start_x = x * window_size + 1;
                 let end_x = (x + 1) * window_size;
                 let start_y = y * window_size + 1;
@@ -199,7 +192,7 @@ pub(crate) fn convert_matrix_to_bed(
                     reference_name: reference_name.to_owned(),
                     reference_start: start_y,
                     reference_end: end_y,
-                    perc_id_by_events: value,
+                    perc_id_by_events: *value,
                 });
             }
         }

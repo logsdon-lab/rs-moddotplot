@@ -1,6 +1,5 @@
 use core::str;
 use std::path::Path;
-use std::usize;
 
 use crate::ani::{convert_matrix_to_bed, create_self_matrix};
 use crate::cfg::LocalSelfIdentConfig;
