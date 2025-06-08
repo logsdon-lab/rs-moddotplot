@@ -11,7 +11,7 @@ fn remove_ambiguous_base(mod_list: &mut AIndexSet<usize>, k: usize) {
     // https://users.rust-lang.org/t/fill-string-with-repeated-character/1121/3
     let kmers_to_remove: AIndexSet<usize> = BASES_TO_REMOVE
         .iter()
-        .map(|b| hash_builder.hash_one(std::iter::repeat(b).take(k).collect::<String>()) as usize)
+        .map(|b| hash_builder.hash_one(std::iter::repeat_n(b, k).collect::<String>()) as usize)
         .collect();
     // Remove homopolymers of ambiguous nucleotides
     mod_list.retain(|m| !kmers_to_remove.contains(m));
