@@ -19,20 +19,13 @@ use crate::{io, Row, SelfIdentConfig};
 ///     * Fasta input file.
 /// * config
 ///     * Configuration for ANI. Similar to ModDotPlot.
-/// * threads
-///     * Number of threads.
 ///
 /// # Returns
 /// * Self-identity BED file matrix as a list of rows.
 pub fn compute_self_identity(
     fasta: impl AsRef<Path>,
     config: Option<SelfIdentConfig>,
-    threads: usize,
 ) -> Vec<Row> {
-    let _ = rayon::ThreadPoolBuilder::new()
-        .num_threads(threads)
-        .build_global();
-
     let cfg = config.unwrap_or_default();
     let window_size = cfg.window_size;
     let delta = cfg.delta;
@@ -282,7 +275,6 @@ mod test {
             let rows = compute_self_identity(
                 "data/HG00438_chr3_HG00438#1#CM089169.1_89902259-96402509.fa",
                 None,
-                1,
             );
             for r in rows.iter() {
                 writeln!(new_file, "{}", r.tsv()).unwrap();

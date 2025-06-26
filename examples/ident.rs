@@ -6,7 +6,7 @@ fn main() {
     let mut args = std::env::args();
     let infile = args.nth(1).expect("Missing input fasta.");
 
-    let bed = compute_self_identity(infile, None, 4);
+    let bed = compute_self_identity(infile, None);
     let mut fh = BufWriter::new(stdout());
     writeln!(&mut fh, "{}", Row::header()).unwrap();
     for row in bed {
