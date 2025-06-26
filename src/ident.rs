@@ -29,10 +29,9 @@ pub fn compute_self_identity(
     config: Option<SelfIdentConfig>,
     threads: usize,
 ) -> Vec<Row> {
-    rayon::ThreadPoolBuilder::new()
+    let _ = rayon::ThreadPoolBuilder::new()
         .num_threads(threads)
-        .build_global()
-        .unwrap();
+        .build_global();
 
     let cfg = config.unwrap_or_default();
     let window_size = cfg.window_size;
