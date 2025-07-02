@@ -14,6 +14,8 @@ pub struct SelfIdentConfig {
     ///  * A lower value will reduce the number of modimizers, but will increase performance.
     ///  * Must be less t
     pub modimizer: usize,
+    /// Seed for ahash RandomState.
+    pub seed: Option<u64>,
 }
 
 impl Default for SelfIdentConfig {
@@ -24,6 +26,7 @@ impl Default for SelfIdentConfig {
             id_threshold: 0.86,
             delta: 0.5,
             modimizer: 1000,
+            seed: Some(12315778783787232),
         }
     }
 }

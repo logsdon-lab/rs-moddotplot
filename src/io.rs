@@ -61,10 +61,15 @@ impl LocalRow {
 
 /// Generate kmers from a sequence string with k length.
 /// Uses ahash instead of murmurhash3.
-pub(crate) fn generate_kmers_from_fasta(seq: &str, k: usize) -> Vec<usize> {
+pub(crate) fn generate_kmers_from_fasta(seq: &str, k: usize, seed: Option<u64>) -> Vec<usize> {
     let n = seq.len();
     let mut kmers = Vec::with_capacity(n - k + 1);
-    let hash_builder = RandomState::new();
+    // Wtf? Why does with_seed produce difference results with the same seed but with_seeds doesn't?
+    // Due to runtime rng. Gets rng from operating system.
+    // https://users.rust-lang.org/t/inexplicable-nondeterministic-behavior-in-scientific-computing-code/109400/13
+    let rng = seed
+        .map(|seed| RandomState::with_seeds(seed, seed, seed, seed))
+        .unwrap_or_default();
     for i in 0..(n - k + 1) {
         let kmer = &seq[i..i + k].to_uppercase();
         let rc_kmer: String = kmer
@@ -78,8 +83,8 @@ pub(crate) fn generate_kmers_from_fasta(seq: &str, k: usize) -> Vec<usize> {
             })
             .rev()
             .collect();
-        let fh = hash_builder.hash_one(kmer) as usize;
-        let rc = hash_builder.hash_one(rc_kmer) as usize;
+        let fh = rng.hash_one(kmer) as usize;
+        let rc = rng.hash_one(rc_kmer) as usize;
 
         kmers.push(if fh < rc { fh } else { rc });
     }
@@ -87,7 +92,11 @@ pub(crate) fn generate_kmers_from_fasta(seq: &str, k: usize) -> Vec<usize> {
 }
 
 /// Read all kmers from a fasta file.
-pub(crate) fn read_kmers(filename: impl AsRef<Path>, k: usize) -> Vec<(String, Vec<usize>)> {
+pub(crate) fn read_kmers(
+    filename: impl AsRef<Path>,
+    k: usize,
+    seed: Option<u64>,
+) -> Vec<(String, Vec<usize>)> {
     let buf = BufReader::new(File::open(filename).unwrap());
     let mut reader = fasta::Reader::new(buf);
     reader
@@ -97,7 +106,11 @@ pub(crate) fn read_kmers(filename: impl AsRef<Path>, k: usize) -> Vec<(String, V
             let rec = rec.unwrap();
             (
                 String::from_utf8(rec.name().to_vec()).unwrap(),
-                generate_kmers_from_fasta(str::from_utf8(rec.sequence().as_ref()).unwrap(), k),
+                generate_kmers_from_fasta(
+                    str::from_utf8(rec.sequence().as_ref()).unwrap(),
+                    k,
+                    seed,
+                ),
             )
         })
         .collect()

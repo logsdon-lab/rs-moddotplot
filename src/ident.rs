@@ -9,8 +9,8 @@ use crate::common::AIndexMap;
 use ahash::AHashSet;
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 
-use crate::io::{generate_kmers_from_fasta, LocalRow};
-use crate::{io, Row, SelfIdentConfig};
+use crate::io::{generate_kmers_from_fasta, read_kmers, LocalRow};
+use crate::{Row, SelfIdentConfig};
 
 /// Compute self-identity between sequences in a given fasta file.
 ///
@@ -22,23 +22,29 @@ use crate::{io, Row, SelfIdentConfig};
 ///
 /// # Returns
 /// * Self-identity BED file matrix as a list of rows.
-pub fn compute_self_identity(
-    fasta: impl AsRef<Path>,
-    config: Option<SelfIdentConfig>,
-) -> Vec<Row> {
+pub fn compute_self_identity(fasta: impl AsRef<Path>, config: Option<SelfIdentConfig>) -> Vec<Row> {
     let cfg = config.unwrap_or_default();
     let window_size = cfg.window_size;
     let delta = cfg.delta;
     let k = cfg.k;
     let id_threshold = cfg.id_threshold;
     let modimizer = cfg.modimizer;
-    let kmers = io::read_kmers(fasta.as_ref(), k);
+    let seed = cfg.seed;
+    let kmers = read_kmers(fasta.as_ref(), k, seed);
 
     kmers
         .into_par_iter()
         .flat_map(|(seq, kmers)| {
-            let mtx =
-                create_self_matrix(kmers, window_size, delta, k, id_threshold, false, modimizer);
+            let mtx = create_self_matrix(
+                kmers,
+                window_size,
+                delta,
+                k,
+                id_threshold,
+                false,
+                modimizer,
+                seed,
+            );
             convert_matrix_to_bed(mtx, window_size, id_threshold, &seq, &seq, true)
         })
         .collect()
@@ -64,9 +70,19 @@ pub fn compute_seq_self_identity(
     let k = cfg.k;
     let id_threshold = cfg.id_threshold;
     let modimizer = cfg.modimizer;
+    let seed = cfg.seed;
 
-    let kmers = generate_kmers_from_fasta(seq, k);
-    let mtx = create_self_matrix(kmers, window_size, delta, k, id_threshold, false, modimizer);
+    let kmers = generate_kmers_from_fasta(seq, k, seed);
+    let mtx = create_self_matrix(
+        kmers,
+        window_size,
+        delta,
+        k,
+        id_threshold,
+        false,
+        modimizer,
+        seed,
+    );
     convert_matrix_to_bed(mtx, window_size, id_threshold, name, name, true)
 }
 

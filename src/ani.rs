@@ -6,12 +6,15 @@ use crate::{common::AIndexSet, io::Row};
 
 const BASES_TO_REMOVE: [char; 11] = ['R', 'Y', 'M', 'K', 'S', 'W', 'H', 'B', 'V', 'D', 'N'];
 
-fn remove_ambiguous_base(mod_list: &mut AIndexSet<usize>, k: usize) {
-    let hash_builder = RandomState::new();
+fn remove_ambiguous_bases(mod_list: &mut AIndexSet<usize>, k: usize, seed: Option<u64>) {
+    let rng = seed
+        .map(|seed| RandomState::with_seeds(seed, seed, seed, seed))
+        .unwrap_or_default();
+
     // https://users.rust-lang.org/t/fill-string-with-repeated-character/1121/3
     let kmers_to_remove: AIndexSet<usize> = BASES_TO_REMOVE
         .iter()
-        .map(|b| hash_builder.hash_one(std::iter::repeat_n(b, k).collect::<String>()) as usize)
+        .map(|b| rng.hash_one(std::iter::repeat_n(b, k).collect::<String>()) as usize)
         .collect();
     // Remove homopolymers of ambiguous nucleotides
     mod_list.retain(|m| !kmers_to_remove.contains(m));
@@ -36,6 +39,7 @@ fn remove_ambiguous_base(mod_list: &mut AIndexSet<usize>, k: usize) {
 ///     * Modimizer sketch size.
 ///     * A lower value will reduce the number of modimizers, but will increase performance.
 ///     * Must be less t
+#[allow(clippy::too_many_arguments)]
 pub(crate) fn create_self_matrix(
     sequence: Vec<usize>,
     window_size: usize,
@@ -44,6 +48,7 @@ pub(crate) fn create_self_matrix(
     identity: f32,
     ambiguous: bool,
     modimizer: usize,
+    seed: Option<u64>,
 ) -> Vec<Vec<f32>> {
     // Restrict sequence sparsity to powers of 2.
     let sequence_sparsity = window_size as f32 / modimizer as f32;
@@ -55,7 +60,6 @@ pub(crate) fn create_self_matrix(
     let sketch_size = window_size / sequence_sparsity as usize;
 
     let no_neighbors = partition_overlaps(&sequence, window_size, 0.0, k);
-
     // If considering neighboring bins, need to find overlaps.
     let neighbors = if delta > 0.0 {
         partition_overlaps(&sequence, window_size, delta, k)
@@ -69,6 +73,7 @@ pub(crate) fn create_self_matrix(
         ambiguous,
         k,
         sketch_size,
+        seed,
     );
     let no_neighbors_mods = convert_to_modimizers(
         &no_neighbors,
@@ -76,6 +81,7 @@ pub(crate) fn create_self_matrix(
         ambiguous,
         k,
         sketch_size,
+        seed,
     );
     self_containment_matrix(no_neighbors_mods, neighbors_mods, k, identity, ambiguous)
 }
@@ -123,7 +129,6 @@ fn partition_overlaps(
         let final_start_index = (index as f32 + 1.0 - delta_offset).round_ties_even() as usize;
         kmer_list.push(&sequence[final_start_index..sequence_length]);
     }
-    // dbg!("{:?}", &kmer_list);
 
     // Test that last value was added on correctly
     if let Some(Some(p)) = kmer_list.last().map(|p| p.last()) {
@@ -138,6 +143,7 @@ fn populate_modimizers(
     ambiguous: bool,
     expectation: usize,
     k: usize,
+    seed: Option<u64>,
 ) -> AIndexSet<usize> {
     let mut mod_set = AIndexSet::default();
     for kmer in partition {
@@ -146,11 +152,11 @@ fn populate_modimizers(
         }
     }
     if !ambiguous {
-        remove_ambiguous_base(&mut mod_set, k);
+        remove_ambiguous_bases(&mut mod_set, k, seed);
     }
     // Decrease sparsity untile expecatition met.
     if (mod_set.len() < expectation / 2) && sparsity > 1 {
-        populate_modimizers(partition, sparsity / 2, ambiguous, expectation, k);
+        populate_modimizers(partition, sparsity / 2, ambiguous, expectation, k, seed);
     }
     mod_set
 }
@@ -161,10 +167,11 @@ fn convert_to_modimizers(
     ambiguous: bool,
     k: usize,
     expectation: usize,
+    seed: Option<u64>,
 ) -> Vec<AIndexSet<usize>> {
     kmer_list
         .into_par_iter()
-        .map(|prt| populate_modimizers(prt, sparsity, ambiguous, expectation, k))
+        .map(|prt| populate_modimizers(prt, sparsity, ambiguous, expectation, k, seed))
         .collect()
 }
 
@@ -180,7 +187,7 @@ pub(crate) fn convert_matrix_to_bed(
     let (rows, cols) = (matrix.len(), matrix.len());
     for (x, col) in matrix.iter().enumerate().take(rows) {
         for (y, value) in col.iter().enumerate().take(cols) {
-            if !self_identity || x <= y && *value >= id_threshold / 100.0 {
+            if (self_identity && x <= y) && *value / 100.0 >= id_threshold {
                 let start_x = x * window_size + 1;
                 let end_x = (x + 1) * window_size;
                 let start_y = y * window_size + 1;
@@ -321,7 +328,28 @@ fn self_containment_matrix(
 
 #[cfg(test)]
 mod test {
-    use crate::ani::partition_overlaps;
+    use ahash::RandomState;
+
+    use crate::{
+        ani::{partition_overlaps, remove_ambiguous_bases},
+        common::AIndexSet,
+    };
+
+    #[test]
+    fn test_remove_ambiguous_bases() {
+        let seed = 42;
+        let rng = RandomState::with_seeds(seed, seed, seed, seed);
+
+        let mut mod_list =
+            AIndexSet::from_iter(["ATGC", "NNNN", "DDDD"].map(|kmer| rng.hash_one(kmer) as usize));
+
+        let expected_mod_list =
+            AIndexSet::from_iter(["ATGC"].map(|kmer: &'static str| rng.hash_one(kmer) as usize));
+
+        remove_ambiguous_bases(&mut mod_list, 4, Some(seed));
+
+        assert_eq!(mod_list, expected_mod_list)
+    }
 
     #[test]
     fn test_partition_overlaps() {
