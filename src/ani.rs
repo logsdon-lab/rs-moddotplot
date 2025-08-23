@@ -58,7 +58,11 @@ pub(crate) fn create_self_matrix(
         2.0f32.powf((sequence_sparsity - 1.0).log2() + 1.0)
     };
     let sketch_size = window_size / sequence_sparsity as usize;
-
+    // Sequence is smaller than window overlap.
+    // Return empty matrix.
+    if window_size + (window_size as f32 * delta) as usize > sequence.len() {
+        return vec![];
+    }
     let no_neighbors = partition_overlaps(&sequence, window_size, 0.0, k);
     // If considering neighboring bins, need to find overlaps.
     let neighbors = if delta > 0.0 {
