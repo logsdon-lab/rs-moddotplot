@@ -230,10 +230,6 @@ pub fn compute_group_seq_self_identity(rows: &[Row]) -> Vec<LocalRow> {
                 .and_then(|x| aln_mtx.get(&x))
                 .and_then(|col| col.get(&(y + 1)));
 
-            if up_left.is_none() && down_right.is_none() {
-                max_x = x;
-                continue;
-            }
             let Some(col) = aln_mtx.get(&x) else {
                 // Update x since we've gone into region.
                 max_x = x;
@@ -242,12 +238,17 @@ pub fn compute_group_seq_self_identity(rows: &[Row]) -> Vec<LocalRow> {
             let Some(ident) = col.get(&y) else {
                 continue;
             };
+            idents.push(*ident);
+
+            if up_left.is_none() && down_right.is_none() {
+                max_x = x;
+                continue;
+            }
             // Add next positions to queue.
             // *
             // x *
             positions.push_back((x, y + 1));
             positions.push_back((x + 1, y));
-            idents.push(*ident);
         }
         if idents.is_empty() {
             continue;
@@ -320,119 +321,177 @@ mod test {
         };
         let grouped_rows = compute_group_seq_self_identity(&rows);
         assert_eq!(
+            grouped_rows,
             vec![
                 LocalRow {
                     chrom: "HG00438_chr3_HG00438#1#CM089169.1:89902259-96402509".to_owned(),
                     start: 89983,
                     end: 104980,
-                    avg_perc_id_by_events: 87.974396
+                    avg_perc_id_by_events: 88.753044,
+                },
+                LocalRow {
+                    chrom: "HG00438_chr3_HG00438#1#CM089169.1:89902259-96402509".to_owned(),
+                    start: 119977,
+                    end: 129975,
+                    avg_perc_id_by_events: 94.93671,
                 },
                 LocalRow {
                     chrom: "HG00438_chr3_HG00438#1#CM089169.1:89902259-96402509".to_owned(),
                     start: 209959,
                     end: 219957,
-                    avg_perc_id_by_events: 90.16794
+                    avg_perc_id_by_events: 91.57252,
+                },
+                LocalRow {
+                    chrom: "HG00438_chr3_HG00438#1#CM089169.1:89902259-96402509".to_owned(),
+                    start: 244952,
+                    end: 254950,
+                    avg_perc_id_by_events: 86.60897,
+                },
+                LocalRow {
+                    chrom: "HG00438_chr3_HG00438#1#CM089169.1:89902259-96402509".to_owned(),
+                    start: 309939,
+                    end: 319937,
+                    avg_perc_id_by_events: 94.3261,
+                },
+                LocalRow {
+                    chrom: "HG00438_chr3_HG00438#1#CM089169.1:89902259-96402509".to_owned(),
+                    start: 374926,
+                    end: 384924,
+                    avg_perc_id_by_events: 91.78412,
                 },
                 LocalRow {
                     chrom: "HG00438_chr3_HG00438#1#CM089169.1:89902259-96402509".to_owned(),
                     start: 394922,
                     end: 404920,
-                    avg_perc_id_by_events: 95.44085
+                    avg_perc_id_by_events: 96.09215,
                 },
                 LocalRow {
                     chrom: "HG00438_chr3_HG00438#1#CM089169.1:89902259-96402509".to_owned(),
                     start: 419917,
                     end: 429915,
-                    avg_perc_id_by_events: 87.34493
+                    avg_perc_id_by_events: 88.0681,
                 },
                 LocalRow {
                     chrom: "HG00438_chr3_HG00438#1#CM089169.1:89902259-96402509".to_owned(),
                     start: 434914,
                     end: 489903,
-                    avg_perc_id_by_events: 81.49909
+                    avg_perc_id_by_events: 81.97048,
+                },
+                LocalRow {
+                    chrom: "HG00438_chr3_HG00438#1#CM089169.1:89902259-96402509".to_owned(),
+                    start: 504900,
+                    end: 1334734,
+                    avg_perc_id_by_events: 89.874695,
                 },
                 LocalRow {
                     chrom: "HG00438_chr3_HG00438#1#CM089169.1:89902259-96402509".to_owned(),
                     start: 1449711,
-                    end: 1469707,
-                    avg_perc_id_by_events: 80.896675
+                    end: 1479705,
+                    avg_perc_id_by_events: 81.01687,
                 },
                 LocalRow {
                     chrom: "HG00438_chr3_HG00438#1#CM089169.1:89902259-96402509".to_owned(),
                     start: 1499701,
-                    end: 1509699,
-                    avg_perc_id_by_events: 80.057755
+                    end: 1549691,
+                    avg_perc_id_by_events: 80.18698,
                 },
                 LocalRow {
                     chrom: "HG00438_chr3_HG00438#1#CM089169.1:89902259-96402509".to_owned(),
                     start: 1549691,
                     end: 1559689,
-                    avg_perc_id_by_events: 94.243454
+                    avg_perc_id_by_events: 95.20288,
                 },
-                // live alpha-satellite array.
                 LocalRow {
                     chrom: "HG00438_chr3_HG00438#1#CM089169.1:89902259-96402509".to_owned(),
                     start: 1574686,
                     end: 3429315,
-                    avg_perc_id_by_events: 99.29863
+                    avg_perc_id_by_events: 99.297165,
                 },
-                // hsat1a.
                 LocalRow {
                     chrom: "HG00438_chr3_HG00438#1#CM089169.1:89902259-96402509".to_owned(),
                     start: 3439313,
                     end: 5168967,
-                    avg_perc_id_by_events: 96.924835
+                    avg_perc_id_by_events: 96.92459,
                 },
                 LocalRow {
                     chrom: "HG00438_chr3_HG00438#1#CM089169.1:89902259-96402509".to_owned(),
                     start: 5173966,
                     end: 5193962,
-                    avg_perc_id_by_events: 94.55426
+                    avg_perc_id_by_events: 94.67859,
                 },
                 LocalRow {
                     chrom: "HG00438_chr3_HG00438#1#CM089169.1:89902259-96402509".to_owned(),
                     start: 5198961,
-                    end: 5368927,
-                    avg_perc_id_by_events: 89.79428
+                    end: 5383924,
+                    avg_perc_id_by_events: 89.7801,
                 },
                 LocalRow {
                     chrom: "HG00438_chr3_HG00438#1#CM089169.1:89902259-96402509".to_owned(),
                     start: 5398921,
-                    end: 5408919,
-                    avg_perc_id_by_events: 88.830315
+                    end: 5418917,
+                    avg_perc_id_by_events: 89.52842,
+                },
+                LocalRow {
+                    chrom: "HG00438_chr3_HG00438#1#CM089169.1:89902259-96402509".to_owned(),
+                    start: 5448911,
+                    end: 5493902,
+                    avg_perc_id_by_events: 85.29002,
                 },
                 LocalRow {
                     chrom: "HG00438_chr3_HG00438#1#CM089169.1:89902259-96402509".to_owned(),
                     start: 5603880,
                     end: 5643872,
-                    avg_perc_id_by_events: 98.12903
+                    avg_perc_id_by_events: 98.15836,
                 },
                 LocalRow {
                     chrom: "HG00438_chr3_HG00438#1#CM089169.1:89902259-96402509".to_owned(),
                     start: 5648871,
-                    end: 5838833,
-                    avg_perc_id_by_events: 92.44347
+                    end: 5928815,
+                    avg_perc_id_by_events: 92.44242,
+                },
+                LocalRow {
+                    chrom: "HG00438_chr3_HG00438#1#CM089169.1:89902259-96402509".to_owned(),
+                    start: 5968807,
+                    end: 5998801,
+                    avg_perc_id_by_events: 92.86073,
+                },
+                LocalRow {
+                    chrom: "HG00438_chr3_HG00438#1#CM089169.1:89902259-96402509".to_owned(),
+                    start: 6028795,
+                    end: 6048791,
+                    avg_perc_id_by_events: 90.89614,
+                },
+                LocalRow {
+                    chrom: "HG00438_chr3_HG00438#1#CM089169.1:89902259-96402509".to_owned(),
+                    start: 6068787,
+                    end: 6098781,
+                    avg_perc_id_by_events: 86.87568,
                 },
                 LocalRow {
                     chrom: "HG00438_chr3_HG00438#1#CM089169.1:89902259-96402509".to_owned(),
                     start: 6118777,
-                    end: 6133774,
-                    avg_perc_id_by_events: 81.78596
+                    end: 6153770,
+                    avg_perc_id_by_events: 81.92507,
                 },
                 LocalRow {
                     chrom: "HG00438_chr3_HG00438#1#CM089169.1:89902259-96402509".to_owned(),
                     start: 6208759,
-                    end: 6218757,
-                    avg_perc_id_by_events: 79.344925
+                    end: 6258749,
+                    avg_perc_id_by_events: 79.27812,
                 },
                 LocalRow {
                     chrom: "HG00438_chr3_HG00438#1#CM089169.1:89902259-96402509".to_owned(),
                     start: 6288743,
-                    end: 6318737,
-                    avg_perc_id_by_events: 80.197556
+                    end: 6338733,
+                    avg_perc_id_by_events: 80.29555,
+                },
+                LocalRow {
+                    chrom: "HG00438_chr3_HG00438#1#CM089169.1:89902259-96402509".to_owned(),
+                    start: 6378725,
+                    end: 6388723,
+                    avg_perc_id_by_events: 93.058205,
                 }
-            ],
-            grouped_rows
+            ]
         )
     }
 }

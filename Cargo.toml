@@ -11,6 +11,12 @@ ahash = "0.8.11"
 indexmap = "2.9.0"
 noodles = { version = "0.96.0", features = ["fasta"] }
 rayon = "1.10.0"
+plotters = { version = "0.3.7", optional = true}
+itertools = {version = "0.14.0", optional = true}
+
+[features]
+default = ["plot"]
+plot = ["dep:plotters", "dep:itertools"]
 
 [[example]]
 name = "ident"
@@ -23,3 +29,7 @@ path = "examples/local_ident.rs"
 [[example]]
 name = "group_ident"
 path = "examples/group_ident.rs"
+
+[[example]]
+name = "plot_self_ident"
+path = "examples/plot_self_ident.rs"

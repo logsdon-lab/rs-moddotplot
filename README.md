@@ -2,7 +2,7 @@
 Rust API implementation of the [`ModDotPlot`](https://github.com/marbl/ModDotPlot) ANI algorithm.
 
 > [!NOTE]
-> Uses ahash instead of MurmurHash3. Mostly due to lack of crates. Some [upside](https://github.com/tkaitchuck/aHash/blob/master/compare/readme.md#comparison-with-other-hashers)? 
+> Uses ahash instead of MurmurHash3. Mostly due to lack of crates. Some [upside](https://github.com/tkaitchuck/aHash/blob/master/compare/readme.md#comparison-with-other-hashers)?
 
 ## Usage
 ```bash
@@ -34,6 +34,21 @@ cargo run --example ident --release -- data/chm13_chr1.fa
 Local self-identity
 ```bash
 cargo run --example local_ident --release -- data/chm13_chr1.fa
+```
+
+Grouped self-identity
+```bash
+cargo run --example group_ident --release -- data/chm13_chr1.fa
+```
+
+Plot self-identity
+```bash
+cargo run --example plot_self_ident --release -- data/chm13_chr1.fa chm13_chr1.png
+```
+
+## Test
+```bash
+cargo test --release
 ```
 
 ## TODO:
