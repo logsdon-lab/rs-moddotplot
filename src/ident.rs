@@ -275,223 +275,76 @@ pub fn compute_group_seq_self_identity(rows: &[Row]) -> Vec<LocalRow> {
 
 #[cfg(test)]
 mod test {
+    use flate2::read::GzDecoder;
     use std::{
         fs::File,
-        io::{BufRead, BufReader, BufWriter, Write},
-        path::Path,
+        io::{BufRead, BufReader},
     };
 
-    use crate::{compute_self_identity, LocalRow, Row};
+    use crate::{
+        compute_group_seq_self_identity, compute_local_seq_self_identity, compute_self_identity,
+        Row,
+    };
 
-    use super::compute_group_seq_self_identity;
-
-    #[test]
-    fn test_self_ident() {
-        let path_outfile = Path::new("rows.tsv");
-        let rows = if let Ok(mut new_file) = File::create_new(path_outfile).map(BufWriter::new) {
-            let rows = compute_self_identity(
-                "data/HG00438_chr3_HG00438#1#CM089169.1_89902259-96402509.fa",
-                None,
-            );
-            for r in rows.iter() {
-                writeln!(new_file, "{}", r.tsv()).unwrap();
-            }
-            rows
-        } else {
-            let reader = BufReader::new(File::open(path_outfile).unwrap());
-            let mut rows = vec![];
-            for line in reader.lines() {
-                let line = line.unwrap();
-                let [qname, qst, qend, rname, rst, rend, ident] =
-                    line.trim().split('\t').collect::<Vec<&str>>()[..]
+    fn read_self_ident(fname: &str) -> Vec<Row> {
+        let reader_self_ident = BufReader::new(GzDecoder::new(File::open(fname).unwrap()));
+        reader_self_ident
+            .lines()
+            .map_while(Result::ok)
+            .map(|line| {
+                let [qchrom, qst, qend, rchrom, rst, rend, ident] =
+                    line.split('\t').collect::<Vec<&str>>()[..]
                 else {
-                    panic!("Invalid columns.")
+                    panic!("Invalid formatted line: {line}")
                 };
-                rows.push(Row {
-                    query_name: qname.to_owned(),
+                Row {
+                    query_name: qchrom.to_owned(),
                     query_start: qst.parse().unwrap(),
                     query_end: qend.parse().unwrap(),
-                    reference_name: rname.to_owned(),
+                    reference_name: rchrom.to_owned(),
                     reference_start: rst.parse().unwrap(),
                     reference_end: rend.parse().unwrap(),
                     perc_id_by_events: ident.parse().unwrap(),
-                });
-            }
-            rows
-        };
-        let grouped_rows = compute_group_seq_self_identity(&rows);
-        assert_eq!(
-            grouped_rows,
-            vec![
-                LocalRow {
-                    chrom: "HG00438_chr3_HG00438#1#CM089169.1:89902259-96402509".to_owned(),
-                    start: 89983,
-                    end: 104980,
-                    avg_perc_id_by_events: 88.753044,
-                },
-                LocalRow {
-                    chrom: "HG00438_chr3_HG00438#1#CM089169.1:89902259-96402509".to_owned(),
-                    start: 119977,
-                    end: 129975,
-                    avg_perc_id_by_events: 94.93671,
-                },
-                LocalRow {
-                    chrom: "HG00438_chr3_HG00438#1#CM089169.1:89902259-96402509".to_owned(),
-                    start: 209959,
-                    end: 219957,
-                    avg_perc_id_by_events: 91.57252,
-                },
-                LocalRow {
-                    chrom: "HG00438_chr3_HG00438#1#CM089169.1:89902259-96402509".to_owned(),
-                    start: 244952,
-                    end: 254950,
-                    avg_perc_id_by_events: 86.60897,
-                },
-                LocalRow {
-                    chrom: "HG00438_chr3_HG00438#1#CM089169.1:89902259-96402509".to_owned(),
-                    start: 309939,
-                    end: 319937,
-                    avg_perc_id_by_events: 94.3261,
-                },
-                LocalRow {
-                    chrom: "HG00438_chr3_HG00438#1#CM089169.1:89902259-96402509".to_owned(),
-                    start: 374926,
-                    end: 384924,
-                    avg_perc_id_by_events: 91.78412,
-                },
-                LocalRow {
-                    chrom: "HG00438_chr3_HG00438#1#CM089169.1:89902259-96402509".to_owned(),
-                    start: 394922,
-                    end: 404920,
-                    avg_perc_id_by_events: 96.09215,
-                },
-                LocalRow {
-                    chrom: "HG00438_chr3_HG00438#1#CM089169.1:89902259-96402509".to_owned(),
-                    start: 419917,
-                    end: 429915,
-                    avg_perc_id_by_events: 88.0681,
-                },
-                LocalRow {
-                    chrom: "HG00438_chr3_HG00438#1#CM089169.1:89902259-96402509".to_owned(),
-                    start: 434914,
-                    end: 489903,
-                    avg_perc_id_by_events: 81.97048,
-                },
-                LocalRow {
-                    chrom: "HG00438_chr3_HG00438#1#CM089169.1:89902259-96402509".to_owned(),
-                    start: 504900,
-                    end: 1334734,
-                    avg_perc_id_by_events: 89.874695,
-                },
-                LocalRow {
-                    chrom: "HG00438_chr3_HG00438#1#CM089169.1:89902259-96402509".to_owned(),
-                    start: 1449711,
-                    end: 1479705,
-                    avg_perc_id_by_events: 81.01687,
-                },
-                LocalRow {
-                    chrom: "HG00438_chr3_HG00438#1#CM089169.1:89902259-96402509".to_owned(),
-                    start: 1499701,
-                    end: 1549691,
-                    avg_perc_id_by_events: 80.18698,
-                },
-                LocalRow {
-                    chrom: "HG00438_chr3_HG00438#1#CM089169.1:89902259-96402509".to_owned(),
-                    start: 1549691,
-                    end: 1559689,
-                    avg_perc_id_by_events: 95.20288,
-                },
-                LocalRow {
-                    chrom: "HG00438_chr3_HG00438#1#CM089169.1:89902259-96402509".to_owned(),
-                    start: 1574686,
-                    end: 3429315,
-                    avg_perc_id_by_events: 99.297165,
-                },
-                LocalRow {
-                    chrom: "HG00438_chr3_HG00438#1#CM089169.1:89902259-96402509".to_owned(),
-                    start: 3439313,
-                    end: 5168967,
-                    avg_perc_id_by_events: 96.92459,
-                },
-                LocalRow {
-                    chrom: "HG00438_chr3_HG00438#1#CM089169.1:89902259-96402509".to_owned(),
-                    start: 5173966,
-                    end: 5193962,
-                    avg_perc_id_by_events: 94.67859,
-                },
-                LocalRow {
-                    chrom: "HG00438_chr3_HG00438#1#CM089169.1:89902259-96402509".to_owned(),
-                    start: 5198961,
-                    end: 5383924,
-                    avg_perc_id_by_events: 89.7801,
-                },
-                LocalRow {
-                    chrom: "HG00438_chr3_HG00438#1#CM089169.1:89902259-96402509".to_owned(),
-                    start: 5398921,
-                    end: 5418917,
-                    avg_perc_id_by_events: 89.52842,
-                },
-                LocalRow {
-                    chrom: "HG00438_chr3_HG00438#1#CM089169.1:89902259-96402509".to_owned(),
-                    start: 5448911,
-                    end: 5493902,
-                    avg_perc_id_by_events: 85.29002,
-                },
-                LocalRow {
-                    chrom: "HG00438_chr3_HG00438#1#CM089169.1:89902259-96402509".to_owned(),
-                    start: 5603880,
-                    end: 5643872,
-                    avg_perc_id_by_events: 98.15836,
-                },
-                LocalRow {
-                    chrom: "HG00438_chr3_HG00438#1#CM089169.1:89902259-96402509".to_owned(),
-                    start: 5648871,
-                    end: 5928815,
-                    avg_perc_id_by_events: 92.44242,
-                },
-                LocalRow {
-                    chrom: "HG00438_chr3_HG00438#1#CM089169.1:89902259-96402509".to_owned(),
-                    start: 5968807,
-                    end: 5998801,
-                    avg_perc_id_by_events: 92.86073,
-                },
-                LocalRow {
-                    chrom: "HG00438_chr3_HG00438#1#CM089169.1:89902259-96402509".to_owned(),
-                    start: 6028795,
-                    end: 6048791,
-                    avg_perc_id_by_events: 90.89614,
-                },
-                LocalRow {
-                    chrom: "HG00438_chr3_HG00438#1#CM089169.1:89902259-96402509".to_owned(),
-                    start: 6068787,
-                    end: 6098781,
-                    avg_perc_id_by_events: 86.87568,
-                },
-                LocalRow {
-                    chrom: "HG00438_chr3_HG00438#1#CM089169.1:89902259-96402509".to_owned(),
-                    start: 6118777,
-                    end: 6153770,
-                    avg_perc_id_by_events: 81.92507,
-                },
-                LocalRow {
-                    chrom: "HG00438_chr3_HG00438#1#CM089169.1:89902259-96402509".to_owned(),
-                    start: 6208759,
-                    end: 6258749,
-                    avg_perc_id_by_events: 79.27812,
-                },
-                LocalRow {
-                    chrom: "HG00438_chr3_HG00438#1#CM089169.1:89902259-96402509".to_owned(),
-                    start: 6288743,
-                    end: 6338733,
-                    avg_perc_id_by_events: 80.29555,
-                },
-                LocalRow {
-                    chrom: "HG00438_chr3_HG00438#1#CM089169.1:89902259-96402509".to_owned(),
-                    start: 6378725,
-                    end: 6388723,
-                    avg_perc_id_by_events: 93.058205,
                 }
-            ]
-        )
+            })
+            .collect::<Vec<Row>>()
+    }
+
+    #[test]
+    fn test_self_ident() {
+        let rows = compute_self_identity(
+            "data/HG00438_chr3_HG00438#1#CM089169.1_89902259-96402509.fa",
+            None,
+        );
+        let reader_self_ident = BufReader::new(GzDecoder::new(
+            File::open("test/self_ident/expected.bed.gz").unwrap(),
+        ));
+        for (line, row) in reader_self_ident.lines().map_while(Result::ok).zip(rows) {
+            assert_eq!(line, row.tsv());
+        }
+    }
+
+    #[test]
+    fn test_group_ident() {
+        let rows = read_self_ident("test/self_ident/expected.bed.gz");
+        let grouped_rows = compute_group_seq_self_identity(&rows);
+        let reader = BufReader::new(GzDecoder::new(
+            File::open("test/group_ident/expected.bed.gz").unwrap(),
+        ));
+        for (line, row) in reader.lines().map_while(Result::ok).zip(grouped_rows) {
+            assert_eq!(line, row.tsv());
+        }
+    }
+
+    #[test]
+    fn test_local_ident() {
+        let rows = read_self_ident("test/self_ident/expected.bed.gz");
+        let local_rows = compute_local_seq_self_identity(&rows, None);
+        let reader = BufReader::new(GzDecoder::new(
+            File::open("test/local_ident/expected.bed.gz").unwrap(),
+        ));
+        for (line, row) in reader.lines().map_while(Result::ok).zip(local_rows) {
+            assert_eq!(line, row.tsv());
+        }
     }
 }
