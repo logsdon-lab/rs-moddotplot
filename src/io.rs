@@ -4,6 +4,16 @@ use ahash::RandomState;
 use noodles::fasta;
 use rayon::iter::{ParallelBridge, ParallelIterator};
 
+#[cfg(feature = "plot")]
+use {
+    crate::{plot::BED, IdentityColorMap},
+    std::borrow::Cow,
+    std::sync::LazyLock,
+};
+
+#[cfg(feature = "plot")]
+static DEFAULT_COLORMAP: LazyLock<IdentityColorMap> = LazyLock::new(IdentityColorMap::default);
+
 /// Sequence identity matrix row.
 #[derive(Debug, PartialEq, Clone)]
 pub struct Row {
@@ -44,6 +54,34 @@ pub struct LocalRow {
     pub end: usize,
     /// Average percent identity by events.
     pub avg_perc_id_by_events: f32,
+}
+
+#[cfg(feature = "plot")]
+impl BED for LocalRow {
+    fn chrom(&self) -> Cow<str> {
+        Cow::Borrowed(&self.chrom)
+    }
+
+    fn start(&self) -> usize {
+        self.start
+    }
+
+    fn end(&self) -> usize {
+        self.end
+    }
+
+    fn name(&self) -> Cow<str> {
+        let (b1, b2, _) = DEFAULT_COLORMAP.search(self.avg_perc_id_by_events);
+        Cow::Owned(format!("{b1}-{b2}"))
+    }
+
+    fn score(&self) -> f32 {
+        self.avg_perc_id_by_events
+    }
+
+    fn color(&self) -> Option<plotters::prelude::RGBColor> {
+        Some(DEFAULT_COLORMAP.search(self.avg_perc_id_by_events).2)
+    }
 }
 
 impl LocalRow {

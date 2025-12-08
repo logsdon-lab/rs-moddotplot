@@ -17,4 +17,4 @@ pub use ident::{
 pub use io::{LocalRow, Row};
 
 #[cfg(feature = "plot")]
-pub use plot::plot_self_ident_tri;
+pub use plot::{plot_self_ident_tri, IdentityColorMap, BED};

@@ -46,6 +46,8 @@ Plot self-identity
 cargo run --example plot_self_ident --release -- data/chm13_chr1.fa chm13_chr1.png
 ```
 
+![](docs/chm13_chr1.png)
+
 ## Test
 ```bash
 cargo test --release
