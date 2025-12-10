@@ -156,6 +156,7 @@ pub fn compute_local_seq_self_identity(
 }
 
 /// Compute the grouped sequence identity from a set of sequence self-identity matrix [`Row`]s.
+/// * Works best when identity threshold set high as avoids transitioning to other non-zero regions.
 ///
 /// # Args
 /// * rows
@@ -203,9 +204,6 @@ pub fn compute_group_seq_self_identity(rows: &[Row]) -> Vec<LocalRow> {
         // 1 * +
         // 0 +
         //   0 1 2 3 4 5 6 7
-        if traveled.contains(&(*x, y)) {
-            continue;
-        }
         let mut positions: VecDeque<(usize, usize)> = VecDeque::from_iter([(*x, y)]);
         let mut idents: Vec<f32> = vec![];
         let mut max_x = *x;
@@ -219,13 +217,13 @@ pub fn compute_group_seq_self_identity(rows: &[Row]) -> Vec<LocalRow> {
             traveled.insert((x, y));
 
             // Stop if both diagonal is zero.
-            // *
+            //   *
             //  x
-            //    *
-            let up_left = aln_mtx
+            // *
+            let up_right = aln_mtx
                 .get(&(x + 1))
                 .and_then(|col| y.checked_sub(1).and_then(|y| col.get(&y)));
-            let down_right = x
+            let down_left = x
                 .checked_sub(1)
                 .and_then(|x| aln_mtx.get(&x))
                 .and_then(|col| col.get(&(y + 1)));
@@ -240,7 +238,7 @@ pub fn compute_group_seq_self_identity(rows: &[Row]) -> Vec<LocalRow> {
             };
             idents.push(*ident);
 
-            if up_left.is_none() && down_right.is_none() {
+            if up_right.is_none() && down_left.is_none() {
                 max_x = x;
                 continue;
             }

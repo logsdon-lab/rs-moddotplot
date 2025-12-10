@@ -37,13 +37,13 @@ const IDENT_BRKPTS: [(f32, RGBColor); 12] = [
 /// Is BED like.
 #[allow(clippy::upper_case_acronyms)]
 pub trait BED {
-    fn chrom(&self) -> Cow<str>;
+    fn chrom(&'_ self) -> Cow<'_, str>;
     /// Start of record.
     fn start(&self) -> usize;
     /// End of record.
     fn end(&self) -> usize;
     /// Name of record.
-    fn name(&self) -> Cow<str>;
+    fn name(&'_ self) -> Cow<'_, str>;
     /// Score of record.
     fn score(&self) -> f32;
     /// Color of record.

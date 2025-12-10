@@ -58,7 +58,7 @@ pub struct LocalRow {
 
 #[cfg(feature = "plot")]
 impl BED for LocalRow {
-    fn chrom(&self) -> Cow<str> {
+    fn chrom(&'_ self) -> Cow<'_, str> {
         Cow::Borrowed(&self.chrom)
     }
 
@@ -70,7 +70,7 @@ impl BED for LocalRow {
         self.end
     }
 
-    fn name(&self) -> Cow<str> {
+    fn name(&'_ self) -> Cow<'_, str> {
         let (b1, b2, _) = DEFAULT_COLORMAP.search(self.avg_perc_id_by_events);
         Cow::Owned(format!("{b1}-{b2}"))
     }
