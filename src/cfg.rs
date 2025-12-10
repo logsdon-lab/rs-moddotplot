@@ -15,7 +15,7 @@ pub struct SelfIdentConfig {
     ///  * Must be less t
     pub modimizer: usize,
     /// Seed for ahash RandomState.
-    pub seed: Option<u64>,
+    pub seed: Option<u32>,
 }
 
 impl Default for SelfIdentConfig {
@@ -26,7 +26,7 @@ impl Default for SelfIdentConfig {
             id_threshold: 0.86,
             delta: 0.5,
             modimizer: 1000,
-            seed: Some(12315778783787232),
+            seed: Some(123157787),
         }
     }
 }

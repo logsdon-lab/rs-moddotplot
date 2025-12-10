@@ -1,20 +1,21 @@
-use ahash::RandomState;
 use core::str;
+use indexmap::IndexSet;
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 
-use crate::{common::AIndexSet, io::Row};
+use crate::{common::get_hash, io::Row};
 
 const BASES_TO_REMOVE: [char; 11] = ['R', 'Y', 'M', 'K', 'S', 'W', 'H', 'B', 'V', 'D', 'N'];
 
-fn remove_ambiguous_bases(mod_list: &mut AIndexSet<usize>, k: usize, seed: Option<u64>) {
-    let rng = seed
-        .map(|seed| RandomState::with_seeds(seed, seed, seed, seed))
-        .unwrap_or_default();
-
+fn remove_ambiguous_bases(mod_list: &mut IndexSet<usize>, k: usize, seed: Option<u32>) {
     // https://users.rust-lang.org/t/fill-string-with-repeated-character/1121/3
-    let kmers_to_remove: AIndexSet<usize> = BASES_TO_REMOVE
+    let kmers_to_remove: IndexSet<usize> = BASES_TO_REMOVE
         .iter()
-        .map(|b| rng.hash_one(std::iter::repeat_n(b, k).collect::<String>()) as usize)
+        .map(|b| {
+            get_hash(
+                std::iter::repeat_n(b, k).collect::<String>().as_bytes(),
+                seed,
+            ) as usize
+        })
         .collect();
     // Remove homopolymers of ambiguous nucleotides
     mod_list.retain(|m| !kmers_to_remove.contains(m));
@@ -48,7 +49,7 @@ pub(crate) fn create_self_matrix(
     identity: f32,
     ambiguous: bool,
     modimizer: usize,
-    seed: Option<u64>,
+    seed: Option<u32>,
 ) -> Vec<Vec<f32>> {
     // Restrict sequence sparsity to powers of 2.
     let sequence_sparsity = window_size as f32 / modimizer as f32;
@@ -147,9 +148,9 @@ fn populate_modimizers(
     ambiguous: bool,
     expectation: usize,
     k: usize,
-    seed: Option<u64>,
-) -> AIndexSet<usize> {
-    let mut mod_set = AIndexSet::default();
+    seed: Option<u32>,
+) -> IndexSet<usize> {
+    let mut mod_set = IndexSet::default();
     for kmer in partition {
         if kmer % sparsity == 0 {
             mod_set.insert(*kmer);
@@ -171,8 +172,8 @@ fn convert_to_modimizers(
     ambiguous: bool,
     k: usize,
     expectation: usize,
-    seed: Option<u64>,
-) -> Vec<AIndexSet<usize>> {
+    seed: Option<u32>,
+) -> Vec<IndexSet<usize>> {
     kmer_list
         .into_par_iter()
         .map(|prt| populate_modimizers(prt, sparsity, ambiguous, expectation, k, seed))
@@ -244,10 +245,10 @@ fn binomial_distance(containment_value: f32, kmer_value: usize) -> f32 {
 /// Returns:
 /// * The containment neighbors value.
 fn containment_neighbors(
-    set1: &AIndexSet<usize>,
-    set2: &AIndexSet<usize>,
-    set3: &AIndexSet<usize>,
-    set4: &AIndexSet<usize>,
+    set1: &IndexSet<usize>,
+    set2: &IndexSet<usize>,
+    set3: &IndexSet<usize>,
+    set4: &IndexSet<usize>,
     identity: f32,
     k: usize,
 ) -> f32 {
@@ -294,8 +295,8 @@ fn containment_neighbors(
 /// # Returns
 /// * An ndarray representing the self-containment matrix.
 fn self_containment_matrix(
-    mod_set: Vec<AIndexSet<usize>>,
-    mod_set_neighbors: Vec<AIndexSet<usize>>,
+    mod_set: Vec<IndexSet<usize>>,
+    mod_set_neighbors: Vec<IndexSet<usize>>,
     k: usize,
     identity: f32,
     ambiguous: bool,
@@ -332,23 +333,24 @@ fn self_containment_matrix(
 
 #[cfg(test)]
 mod test {
-    use ahash::RandomState;
+    use indexmap::IndexSet;
 
     use crate::{
         ani::{partition_overlaps, remove_ambiguous_bases},
-        common::AIndexSet,
+        common::get_hash,
     };
 
     #[test]
     fn test_remove_ambiguous_bases() {
-        let seed = 42;
-        let rng = RandomState::with_seeds(seed, seed, seed, seed);
+        let seed: u32 = 42;
 
-        let mut mod_list =
-            AIndexSet::from_iter(["ATGC", "NNNN", "DDDD"].map(|kmer| rng.hash_one(kmer) as usize));
+        let mut mod_list = IndexSet::from_iter(
+            ["ATGC", "NNNN", "DDDD"].map(|kmer| get_hash(kmer.as_bytes(), Some(seed)) as usize),
+        );
 
-        let expected_mod_list =
-            AIndexSet::from_iter(["ATGC"].map(|kmer: &'static str| rng.hash_one(kmer) as usize));
+        let expected_mod_list: IndexSet<usize> = IndexSet::from_iter(
+            ["ATGC"].map(|kmer: &'static str| get_hash(kmer.as_bytes(), Some(seed)) as usize),
+        );
 
         remove_ambiguous_bases(&mut mod_list, 4, Some(seed));
 

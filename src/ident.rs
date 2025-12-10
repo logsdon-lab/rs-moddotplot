@@ -4,9 +4,8 @@ use std::path::Path;
 
 use crate::ani::{convert_matrix_to_bed, create_self_matrix};
 use crate::cfg::LocalSelfIdentConfig;
-use crate::common::AIndexMap;
 
-use ahash::AHashSet;
+use indexmap::{IndexMap, IndexSet};
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 
 use crate::io::{generate_kmers_from_fasta, read_kmers, LocalRow};
@@ -108,7 +107,7 @@ pub fn compute_local_seq_self_identity(
         return vec![];
     };
 
-    let mut aln_mtx: AIndexMap<usize, AIndexMap<usize, f32>> = AIndexMap::default();
+    let mut aln_mtx: IndexMap<usize, IndexMap<usize, f32>> = IndexMap::default();
     for line in rows {
         let x = line.query_start / window;
         let y = line.reference_start / window;
@@ -119,7 +118,7 @@ pub fn compute_local_seq_self_identity(
             .and_modify(|rec| {
                 rec.insert(y, ident);
             })
-            .or_insert_with(|| AIndexMap::from_iter([(y, ident)]));
+            .or_insert_with(|| IndexMap::from_iter([(y, ident)]));
     }
     let mut binned_ident = vec![];
     for st_idx in aln_mtx.keys() {
@@ -174,7 +173,7 @@ pub fn compute_group_seq_self_identity(rows: &[Row]) -> Vec<LocalRow> {
     };
 
     let mut binned_ident = vec![];
-    let mut aln_mtx: AIndexMap<usize, AIndexMap<usize, f32>> = AIndexMap::default();
+    let mut aln_mtx: IndexMap<usize, IndexMap<usize, f32>> = IndexMap::default();
     for line in rows {
         let x = line.query_start / window;
         let y = line.reference_start / window;
@@ -185,11 +184,11 @@ pub fn compute_group_seq_self_identity(rows: &[Row]) -> Vec<LocalRow> {
             .and_modify(|rec| {
                 rec.insert(y, ident);
             })
-            .or_insert_with(|| AIndexMap::from_iter([(y, ident)]));
+            .or_insert_with(|| IndexMap::from_iter([(y, ident)]));
     }
 
     // BFS search.
-    let mut traveled = AHashSet::new();
+    let mut traveled: IndexSet<(usize, usize)> = IndexSet::default();
     for x in aln_mtx.keys() {
         let y = *x;
         // Travel along the self-identity band and perform a breadth first search for any non-zero identity position.
@@ -273,16 +272,18 @@ pub fn compute_group_seq_self_identity(rows: &[Row]) -> Vec<LocalRow> {
 
 #[cfg(test)]
 mod test {
-    use flate2::read::GzDecoder;
+    use flate2::{read::GzDecoder, write::GzEncoder, Compression};
     use std::{
         fs::File,
-        io::{BufRead, BufReader},
+        io::{BufRead, BufReader, Write},
     };
 
     use crate::{
         compute_group_seq_self_identity, compute_local_seq_self_identity, compute_self_identity,
         Row,
     };
+    // Rewrite test files.
+    const REWRITE: bool = false;
 
     fn read_self_ident(fname: &str) -> Vec<Row> {
         let reader_self_ident = BufReader::new(GzDecoder::new(File::open(fname).unwrap()));
@@ -314,11 +315,22 @@ mod test {
             "data/HG00438_chr3_HG00438#1#CM089169.1_89902259-96402509.fa",
             None,
         );
-        let reader_self_ident = BufReader::new(GzDecoder::new(
-            File::open("test/self_ident/expected.bed.gz").unwrap(),
-        ));
-        for (line, row) in reader_self_ident.lines().map_while(Result::ok).zip(rows) {
-            assert_eq!(line, row.tsv());
+        if !REWRITE {
+            let reader_self_ident = BufReader::new(GzDecoder::new(
+                File::open("test/self_ident/expected.bed.gz").unwrap(),
+            ));
+            for (line, row) in reader_self_ident.lines().map_while(Result::ok).zip(rows) {
+                assert_eq!(line, row.tsv());
+            }
+        } else {
+            let mut writer = GzEncoder::new(
+                File::create("test/self_ident/expected.bed.gz").unwrap(),
+                Compression::default(),
+            );
+            for row in rows {
+                writeln!(&mut writer, "{}", row.tsv()).unwrap();
+            }
+            writer.finish().unwrap();
         }
     }
 
@@ -326,11 +338,22 @@ mod test {
     fn test_group_ident() {
         let rows = read_self_ident("test/self_ident/expected.bed.gz");
         let grouped_rows = compute_group_seq_self_identity(&rows);
-        let reader = BufReader::new(GzDecoder::new(
-            File::open("test/group_ident/expected.bed.gz").unwrap(),
-        ));
-        for (line, row) in reader.lines().map_while(Result::ok).zip(grouped_rows) {
-            assert_eq!(line, row.tsv());
+        if !REWRITE {
+            let reader = BufReader::new(GzDecoder::new(
+                File::open("test/group_ident/expected.bed.gz").unwrap(),
+            ));
+            for (line, row) in reader.lines().map_while(Result::ok).zip(grouped_rows) {
+                assert_eq!(line, row.tsv());
+            }
+        } else {
+            let mut writer = GzEncoder::new(
+                File::create("test/group_ident/expected.bed.gz").unwrap(),
+                Compression::default(),
+            );
+            for row in grouped_rows {
+                writeln!(&mut writer, "{}", row.tsv()).unwrap();
+            }
+            writer.finish().unwrap();
         }
     }
 
@@ -338,11 +361,22 @@ mod test {
     fn test_local_ident() {
         let rows = read_self_ident("test/self_ident/expected.bed.gz");
         let local_rows = compute_local_seq_self_identity(&rows, None);
-        let reader = BufReader::new(GzDecoder::new(
-            File::open("test/local_ident/expected.bed.gz").unwrap(),
-        ));
-        for (line, row) in reader.lines().map_while(Result::ok).zip(local_rows) {
-            assert_eq!(line, row.tsv());
+        if !REWRITE {
+            let reader = BufReader::new(GzDecoder::new(
+                File::open("test/local_ident/expected.bed.gz").unwrap(),
+            ));
+            for (line, row) in reader.lines().map_while(Result::ok).zip(local_rows) {
+                assert_eq!(line, row.tsv());
+            }
+        } else {
+            let mut writer = GzEncoder::new(
+                File::create("test/local_ident/expected.bed.gz").unwrap(),
+                Compression::default(),
+            );
+            for row in local_rows {
+                writeln!(&mut writer, "{}", row.tsv()).unwrap();
+            }
+            writer.finish().unwrap();
         }
     }
 }

@@ -1,8 +1,9 @@
 use std::{fs::File, io::BufReader, path::Path, str};
 
-use ahash::RandomState;
 use noodles::fasta;
 use rayon::iter::{ParallelBridge, ParallelIterator};
+
+use crate::common::get_hash;
 
 #[cfg(feature = "plot")]
 use {
@@ -99,15 +100,12 @@ impl LocalRow {
 
 /// Generate kmers from a sequence string with k length.
 /// Uses ahash instead of murmurhash3.
-pub(crate) fn generate_kmers_from_fasta(seq: &str, k: usize, seed: Option<u64>) -> Vec<usize> {
+pub(crate) fn generate_kmers_from_fasta(seq: &str, k: usize, seed: Option<u32>) -> Vec<usize> {
     let n = seq.len();
     let mut kmers = Vec::with_capacity(n - k + 1);
     // Wtf? Why does with_seed produce difference results with the same seed but with_seeds doesn't?
     // Due to runtime rng. Gets rng from operating system.
     // https://users.rust-lang.org/t/inexplicable-nondeterministic-behavior-in-scientific-computing-code/109400/13
-    let rng = seed
-        .map(|seed| RandomState::with_seeds(seed, seed, seed, seed))
-        .unwrap_or_default();
     for i in 0..(n - k + 1) {
         let kmer = &seq[i..i + k].to_uppercase();
         let rc_kmer: String = kmer
@@ -121,8 +119,9 @@ pub(crate) fn generate_kmers_from_fasta(seq: &str, k: usize, seed: Option<u64>) 
             })
             .rev()
             .collect();
-        let fh = rng.hash_one(kmer) as usize;
-        let rc = rng.hash_one(rc_kmer) as usize;
+
+        let fh = get_hash(kmer.as_bytes(), seed) as usize;
+        let rc = get_hash(rc_kmer.as_bytes(), seed) as usize;
 
         kmers.push(if fh < rc { fh } else { rc });
     }
@@ -133,7 +132,7 @@ pub(crate) fn generate_kmers_from_fasta(seq: &str, k: usize, seed: Option<u64>) 
 pub(crate) fn read_kmers(
     filename: impl AsRef<Path>,
     k: usize,
-    seed: Option<u64>,
+    seed: Option<u32>,
 ) -> Vec<(String, Vec<usize>)> {
     let buf = BufReader::new(File::open(filename).unwrap());
     let mut reader = fasta::Reader::new(buf);

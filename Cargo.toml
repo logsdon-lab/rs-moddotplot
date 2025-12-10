@@ -7,7 +7,7 @@ edition = "2021"
 path = "src/lib.rs"
 
 [dependencies]
-ahash = "0.8.11"
+murmur3 = "0.5.2"
 indexmap = "2.9.0"
 noodles = { version = "0.96.0", features = ["fasta"] }
 rayon = "1.10.0"

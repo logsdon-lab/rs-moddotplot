@@ -3,9 +3,6 @@
 
 Rust API implementation of the [`ModDotPlot`](https://github.com/marbl/ModDotPlot) ANI algorithm.
 
-> [!NOTE]
-> Uses ahash instead of MurmurHash3. Mostly due to lack of crates. Some [upside](https://github.com/tkaitchuck/aHash/blob/master/compare/readme.md#comparison-with-other-hashers)?
-
 ## Usage
 ```bash
 cargo add --git https://github.com/koisland/rs-moddotplot.git
