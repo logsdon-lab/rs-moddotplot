@@ -23,6 +23,10 @@ jobs:
         with:
           toolchain: stable
 
+      - name: Install fontconfig
+        run: |
+          sudo apt-get -y install fontconfig
+
       - name: Cache cargo registry
         uses: actions/cache@v3
         with:

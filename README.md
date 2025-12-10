@@ -1,4 +1,6 @@
 # rs-ModDotPlot
+[![CI](https://github.com/logsdon-lab/rs-moddotplot/actions/workflows/ci.yaml/badge.svg)](https://github.com/logsdon-lab/rs-moddotplot/actions/workflows/ci.yaml)
+
 Rust API implementation of the [`ModDotPlot`](https://github.com/marbl/ModDotPlot) ANI algorithm.
 
 > [!NOTE]
