@@ -25,7 +25,7 @@ jobs:
 
       - name: Install fontconfig
         run: |
-          sudo apt-get -y install fontconfig
+          sudo apt-get -y install libfontconfig1-dev
 
       - name: Cache cargo registry
         uses: actions/cache@v3
