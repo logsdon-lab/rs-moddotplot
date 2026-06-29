@@ -3,3 +3,4 @@ rows.tsv
 README.md
 src/io.rs
 src/plot.rs
+test/comparison

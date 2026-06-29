@@ -45,7 +45,13 @@ Plot self-identity
 cargo run --example plot_self_ident --release -- data/chm13_chr1.fa chm13_chr1.png
 ```
 
-![](docs/chm13_chr1.png)
+Comparison to ModDotPlot v0.9.9. See (examples/run_moddotplot_cmp.sh).
+|ModDotPlot|This version|
+|-|-|
+|<img src="docs/chr1_TRI.png" width=500>|<img src="docs/chm13_chr1.png" width=500>|
+
+* Difference in colorscale. This uses a custom set of breakpoints (examples/colorscale.tsv) to better highlight duplications. Custom colorscales currrently don't work in v0.9.9 (See https://github.com/marbl/ModDotPlot/issues/57)
+* Murmurhash implementation difference (https://github.com/hajimes/mmh3 vs https://github.com/stusmall/murmur3) results in slight average self-identity differences. Unclear how the seed is set for python murmurhash implementation and ModDotPlot doesn't set [it](https://github.com/marbl/ModDotPlot/blob/a2268ee0a92f4bc2a06851ccb817bb170a7af7d9/src/moddotplot/parse_fasta.py#L64). This implementation sets the hasher seed but the general satellite region boundaries appear similar and BEDPE rows are not equal.
 
 ## Test
 ```bash

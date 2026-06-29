@@ -192,10 +192,10 @@ pub(crate) fn convert_matrix_to_bed(
     let (rows, cols) = (matrix.len(), matrix.len());
     for (x, col) in matrix.iter().enumerate().take(rows) {
         for (y, value) in col.iter().enumerate().take(cols) {
-            if (self_identity && x <= y) && *value / 100.0 >= id_threshold {
-                let start_x = x * window_size + 1;
+            if (self_identity && x <= y) && *value >= id_threshold {
+                let start_x = x * window_size;
                 let end_x = (x + 1) * window_size;
-                let start_y = y * window_size + 1;
+                let start_y = y * window_size;
                 let end_y = (y + 1) * window_size;
                 bed.push(Row {
                     query_name: query_name.to_owned(),
@@ -212,13 +212,14 @@ pub(crate) fn convert_matrix_to_bed(
     bed
 }
 
-/// Calculate the binomial distance based on containment and kmer values.
+/// Calculate the binomial distance.
+/// * This is probability of mutation at each position in a k-mer with the binomial distribution to estimate the ANI.
 ///
 /// # Args
 /// * containment_value
 ///     * The containment value.
 /// * kmer_value
-///     * The k-mer value.
+///     * The k-mer length.
 ///
 /// # Returns
 /// * The binomial distance.

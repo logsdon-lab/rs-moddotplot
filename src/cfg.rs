@@ -23,7 +23,7 @@ impl Default for SelfIdentConfig {
         Self {
             window_size: 5000,
             k: 21,
-            id_threshold: 0.86,
+            id_threshold: 86.0,
             delta: 0.5,
             modimizer: 1000,
             seed: Some(123157787),

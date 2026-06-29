@@ -122,8 +122,8 @@ pub fn compute_local_seq_self_identity(
     }
     let mut binned_ident = vec![];
     for st_idx in aln_mtx.keys() {
-        let start = st_idx * window + 1;
-        let end = start + window - 1;
+        let start = st_idx * window;
+        let end = start + (window - 1) + 1;
         let band_end_idx = st_idx + n_bins;
 
         // Within the alignment matrix with a n_bins of 5 and ignore_bands of 2:
@@ -251,8 +251,8 @@ pub fn compute_group_seq_self_identity(rows: &[Row]) -> Vec<LocalRow> {
             continue;
         }
 
-        let start = x * window + 1;
-        let end = max_x * window + 1;
+        let start = x * window;
+        let end = max_x * window;
         let length = end - start;
         let n_pos = idents.len() as f32;
         // Ignore self diagonal.
