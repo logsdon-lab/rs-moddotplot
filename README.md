@@ -42,6 +42,7 @@ cargo run --example group_ident --release -- data/chm13_chr1.fa
 
 Plot self-identity
 ```bash
+cargo add --git https://github.com/koisland/rs-moddotplot.git --features plot
 cargo run --example plot_self_ident --release -- data/chm13_chr1.fa chm13_chr1.png
 ```
 

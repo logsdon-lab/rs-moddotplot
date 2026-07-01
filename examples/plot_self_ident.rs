@@ -1,4 +1,6 @@
-use rs_moddotplot::{compute_group_seq_self_identity, compute_self_identity, plot_self_ident_tri};
+#[cfg(feature = "plot")]
+use rs_moddotplot::plot_self_ident_tri;
+use rs_moddotplot::{compute_group_seq_self_identity, compute_self_identity};
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
@@ -16,5 +18,6 @@ fn main() {
     let rows = compute_self_identity(infile, None);
     let groups = compute_group_seq_self_identity(&rows);
 
+    #[cfg(feature = "plot")]
     plot_self_ident_tri(&rows, Some(&groups), None, &fname, &outfile, false);
 }
