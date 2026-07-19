@@ -2,6 +2,11 @@
 name = "rs-moddotplot"
 version = "0.1.0"
 edition = "2021"
+authors = ["Keisuke K. Oshima <koisland@pm.me>"]
+description = "Rust port of ModDotPlot"
+repository = "https://github.com/logsdon-lab/rs-moddotplot"
+readme = "README.md"
+license = "MIT"
 
 [lib]
 path = "src/lib.rs"
