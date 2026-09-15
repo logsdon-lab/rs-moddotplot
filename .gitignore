@@ -4,3 +4,6 @@ README.md
 src/io.rs
 src/plot.rs
 test/comparison
+# pixi environments
+.pixi/*
+!.pixi/config.toml

@@ -42,3 +42,7 @@ path = "examples/group_ident.rs"
 [[example]]
 name = "plot_self_ident"
 path = "examples/plot_self_ident.rs"
+
+[[example]]
+name = "find_inv_dup"
+path = "examples/find_inv_dup.rs"

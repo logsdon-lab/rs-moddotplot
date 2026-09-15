@@ -4,6 +4,7 @@ mod ani;
 mod cfg;
 mod common;
 mod ident;
+mod invdup;
 mod io;
 
 #[cfg(feature = "plot")]
@@ -14,6 +15,7 @@ pub use ident::{
     compute_group_seq_self_identity, compute_local_seq_self_identity, compute_self_identity,
     compute_seq_self_identity,
 };
+pub use invdup::{find_simple_inversion_duplications, EventInterval};
 pub use io::{LocalRow, Row};
 
 #[cfg(feature = "plot")]
